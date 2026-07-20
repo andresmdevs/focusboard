@@ -1,0 +1,24 @@
+# dependencias
+node_modules/
+
+# build de Astro
+dist/
+.astro/
+
+# Firebase
+.firebase/
+firebase-debug.log
+*firebase*.log
+
+# entorno
+.env
+.env.*
+!.env.example
+
+# sistema / editores
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+.claude/

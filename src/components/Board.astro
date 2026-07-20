@@ -1,0 +1,15 @@
+---
+import Column from "./Column.astro";
+
+// Definición declarativa de columnas: agregar un estado es una línea aquí
+// (y su entrada correspondiente en src/scripts/app.js).
+const columns = [
+  { status: "todo", title: "Pendientes" },
+  { status: "progress", title: "En progreso" },
+  { status: "testing", title: "Pruebas" },
+  { status: "done", title: "Finalizado" },
+];
+---
+<section class="board" id="board" aria-label="Tablero de tareas">
+  {columns.map((column) => <Column status={column.status} title={column.title} />)}
+</section>

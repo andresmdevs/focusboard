@@ -1,0 +1,19 @@
+---
+// Una columna del tablero. El script cliente rellena la lista por `data-*`.
+interface Props {
+  status: string;
+  title: string;
+}
+const { status, title } = Astro.props;
+---
+<section class="board-column" data-status={status} aria-labelledby={`${status}-title`}>
+  <header class="column-header">
+    <div>
+      <span class={`status-dot status-dot-${status}`}></span>
+      <h2 id={`${status}-title`}>{title}</h2>
+    </div>
+    <span class="column-count" data-count-for={status}>0</span>
+  </header>
+  <div class="task-list" data-list-for={status} role="list"></div>
+  <button class="add-task-link" type="button" data-add-for={status}>+ Añadir tarea</button>
+</section>

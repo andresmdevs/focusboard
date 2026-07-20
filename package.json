@@ -1,0 +1,17 @@
+{
+  "name": "focusboard",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Tablero personal de tareas (PWA) construido con Astro.",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "deploy": "astro build && npx -y firebase-tools deploy --only hosting"
+  },
+  "dependencies": {
+    "astro": "^7.1.3"
+  }
+}

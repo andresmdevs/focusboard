@@ -1,0 +1,47 @@
+---
+// Modal de creación/edición de tareas.
+---
+<dialog class="task-dialog" id="task-dialog" aria-labelledby="dialog-title">
+  <form method="dialog" id="task-form">
+    <div class="dialog-header">
+      <div><p class="eyebrow">ORGANIZA</p><h2 id="dialog-title">Nueva tarea</h2></div>
+      <button class="icon-button" id="close-dialog" type="button" aria-label="Cerrar formulario">×</button>
+    </div>
+    <input id="task-id" type="hidden" />
+    <div class="form-grid">
+      <label class="form-field form-field-wide">Título
+        <input id="task-title" name="title" type="text" maxlength="120" placeholder="¿Qué necesitas avanzar?" required />
+      </label>
+      <label class="form-field form-field-wide">Detalle <span>(opcional)</span>
+        <textarea id="task-description" name="description" maxlength="280" rows="3" placeholder="Un resultado claro ayuda a terminarla."></textarea>
+      </label>
+      <label class="form-field">Estado
+        <select id="task-status" name="status">
+          <option value="todo">Pendiente</option>
+          <option value="progress">En progreso</option>
+          <option value="testing">Pruebas</option>
+          <option value="done">Finalizado</option>
+        </select>
+      </label>
+      <label class="form-field">Prioridad
+        <select id="task-priority" name="priority">
+          <option value="high">Alta</option>
+          <option value="medium" selected>Media</option>
+          <option value="low">Baja</option>
+        </select>
+      </label>
+      <label class="form-field">Fecha límite <span>(opcional)</span>
+        <input id="task-due-date" name="dueDate" type="date" />
+      </label>
+      <label class="form-field">Etiquetas <span>(separadas por coma)</span>
+        <input id="task-tags" name="tags" type="text" maxlength="100" placeholder="Estudio, Azure" />
+      </label>
+    </div>
+    <div class="dialog-actions">
+      <button class="danger-button" id="delete-task" type="button" hidden>Eliminar</button>
+      <span class="dialog-spacer"></span>
+      <button class="secondary-button" id="cancel-dialog" type="button">Cancelar</button>
+      <button class="primary-button" type="submit">Guardar tarea</button>
+    </div>
+  </form>
+</dialog>

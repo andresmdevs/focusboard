@@ -1,0 +1,13 @@
+{
+  "name": "Focusboard",
+  "short_name": "Focusboard",
+  "description": "Mi tablero personal ",
+  "lang": "es-CO",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f7f4",
+  "theme_color": "#1d6e5b",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

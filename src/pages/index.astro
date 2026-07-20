@@ -1,0 +1,32 @@
+---
+import AppLayout from "../layouts/AppLayout.astro";
+import TopBar from "../components/TopBar.astro";
+import Hero from "../components/Hero.astro";
+import Dashboard from "../components/Dashboard.astro";
+import BoardControls from "../components/BoardControls.astro";
+import Board from "../components/Board.astro";
+import TaskDialog from "../components/TaskDialog.astro";
+---
+<AppLayout>
+  <main class="app-shell">
+    <TopBar />
+    <Hero />
+    <Dashboard />
+    <BoardControls />
+    <Board />
+  </main>
+
+  <TaskDialog />
+
+  <template id="task-template">
+    <article class="task-card" role="listitem" tabindex="0">
+      <div class="task-card-top"><span class="priority-badge"></span><button class="task-menu" type="button" aria-label="Editar tarea">•••</button></div>
+      <h3></h3>
+      <p class="task-description"></p>
+      <div class="task-tags"></div>
+      <footer class="task-footer"><span class="due-date"></span><select class="status-select" aria-label="Cambiar estado"></select></footer>
+    </article>
+  </template>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</AppLayout>
