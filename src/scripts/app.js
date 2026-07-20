@@ -1,5 +1,8 @@
-const STORAGE_KEY = "focusboard.tasks.v1";
+import { db } from "./firebase.js";
+import { ref, onValue, set, update, remove } from "firebase/database";
+
 const THEME_KEY = "focusboard.theme.v1";
+const tasksRef = ref(db, "tasks");
 
 const STATUSES = {
   todo: "Pendiente",
@@ -14,40 +17,7 @@ const PRIORITIES = {
   low: "Baja",
 };
 
-const seedTasks = [
-  {
-    id: "az204-plan",
-    title: "Organizar el repaso completo de AZ-204",
-    description: "Distribuir el temario y material de estudio de los próximos tres días antes del examen.",
-    status: "progress",
-    priority: "high",
-    dueDate: "2026-07-23",
-    tags: ["Estudio", "Azure", "AZ-204"],
-    createdAt: "2026-07-20T09:00:00.000Z",
-  },
-  {
-    id: "az204-compute",
-    title: "Repasar Azure compute y App Service",
-    description: "Completar el bloque de soluciones de cómputo y tomar notas de los puntos débiles.",
-    status: "todo",
-    priority: "high",
-    dueDate: "2026-07-21",
-    tags: ["Estudio", "Azure"],
-    createdAt: "2026-07-20T09:05:00.000Z",
-  },
-  {
-    id: "observability-review",
-    title: "Revisar alertas y paneles de observabilidad",
-    description: "Validar que las alertas críticas tengan contexto, responsable y un siguiente paso claro.",
-    status: "todo",
-    priority: "medium",
-    dueDate: "",
-    tags: ["Operación", "Observabilidad"],
-    createdAt: "2026-07-20T09:10:00.000Z",
-  },
-];
-
-let tasks = loadTasks();
+let tasks = [];
 let activeStatus = "todo";
 let toastTimer;
 let touchDrag = null;
@@ -58,17 +28,18 @@ const taskTemplate = document.querySelector("#task-template");
 const searchInput = document.querySelector("#search-input");
 const priorityFilter = document.querySelector("#priority-filter");
 
-function loadTasks() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return Array.isArray(stored) ? stored : seedTasks;
-  } catch {
-    return seedTasks;
-  }
-}
-
-function saveTasks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+function subscribeTasks() {
+  // Fuente de verdad: Realtime Database. Cualquier cambio (local o de otro
+  // dispositivo) llega por aquí y re-renderiza el tablero en tiempo real.
+  onValue(
+    tasksRef,
+    (snapshot) => {
+      const value = snapshot.val();
+      tasks = value ? Object.values(value) : [];
+      render();
+    },
+    () => showToast("Sin conexión con la base de datos.")
+  );
 }
 
 function formatDate(dateString) {
@@ -153,7 +124,10 @@ function render() {
     const list = document.querySelector(`[data-list-for="${status}"]`);
     const statusTasks = filtered
       .filter((task) => task.status === status)
-      .sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31"));
+      .sort((a, b) => {
+        const byDate = (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31");
+        return byDate !== 0 ? byDate : (a.createdAt || "").localeCompare(b.createdAt || "");
+      });
     list.replaceChildren(...statusTasks.map(renderTask));
     if (!statusTasks.length) {
       const empty = document.createElement("p");
@@ -193,9 +167,7 @@ function closeForm() {
 function updateStatus(id, status) {
   const currentTask = tasks.find((task) => task.id === id);
   if (!currentTask || currentTask.status === status) return;
-  tasks = tasks.map((task) => task.id === id ? { ...task, status } : task);
-  saveTasks();
-  render();
+  update(ref(db, `tasks/${id}`), { status });
   showToast(`Movida a ${STATUSES[status].toLocaleLowerCase("es")}.`);
 }
 
@@ -284,9 +256,7 @@ function endTouchDrag(event) {
 function deleteTask() {
   const id = document.querySelector("#task-id").value;
   if (!id) return;
-  tasks = tasks.filter((task) => task.id !== id);
-  saveTasks();
-  render();
+  remove(ref(db, `tasks/${id}`));
   closeForm();
   showToast("Tarea eliminada.");
 }
@@ -313,6 +283,7 @@ function toggleTheme() {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const id = document.querySelector("#task-id").value;
+  const existing = id ? tasks.find((item) => item.id === id) : null;
   const task = {
     id: id || crypto.randomUUID(),
     title: document.querySelector("#task-title").value.trim(),
@@ -321,12 +292,10 @@ form.addEventListener("submit", (event) => {
     priority: document.querySelector("#task-priority").value,
     dueDate: document.querySelector("#task-due-date").value,
     tags: document.querySelector("#task-tags").value.split(",").map((tag) => tag.trim()).filter(Boolean),
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
   };
   if (!task.title) return;
-  tasks = id ? tasks.map((item) => item.id === id ? { ...item, ...task } : item) : [task, ...tasks];
-  saveTasks();
-  render();
+  set(ref(db, `tasks/${task.id}`), task);
   closeForm();
   showToast(id ? "Tarea actualizada." : "Tarea creada.");
 });
@@ -356,6 +325,7 @@ document.addEventListener("mouseup", endTouchDrag);
 initializeTheme();
 setTodayLabel();
 render();
+subscribeTasks();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js"));
