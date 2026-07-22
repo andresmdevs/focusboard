@@ -35,6 +35,10 @@ import RadarLayout from "../layouts/RadarLayout.astro";
         <p>Última corrida</p>
         <strong id="radar-updated">Cargando…</strong>
         <span id="radar-floor"></span>
+        <button class="refresh-btn" id="radar-refresh" type="button">
+          ⟳ Actualizar ahora
+        </button>
+        <span id="radar-refresh-status" class="refresh-status" hidden></span>
       </div>
     </section>
 
@@ -115,11 +119,18 @@ import RadarLayout from "../layouts/RadarLayout.astro";
   .salary-chip { padding: 3px 8px; border-radius: 6px; background: var(--surface-muted); color: var(--muted); font-family: "DM Mono", monospace; font-size: .72rem; }
   .salary-ok { background: var(--accent-soft); color: var(--accent-dark); font-weight: 500; }
   .job-date { color: var(--muted); font-size: .74rem; }
+  .cv-btn { margin-top: 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--accent); font-size: .8rem; font-weight: 600; transition: background .15s ease, border-color .15s ease; }
+  .cv-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .cv-btn:disabled { opacity: .75; cursor: default; }
+  .refresh-btn { display: block; margin-top: 12px; padding: 8px 12px; border: 1px solid rgba(255,255,255,.35); border-radius: 9px; background: rgba(255,255,255,.12); color: #effaf6; font-size: .82rem; font-weight: 600; }
+  .refresh-btn:hover { background: rgba(255,255,255,.22); }
+  .refresh-btn:disabled { opacity: .6; cursor: default; }
+  .refresh-status { display: block; margin-top: 7px; font-size: .74rem; color: #d9f0e7; }
 </style>
 
 <script>
   import { db } from "../scripts/firebase.js";
-  import { ref, onValue } from "firebase/database";
+  import { ref, onValue, set } from "firebase/database";
 
   const THEME_KEY = "focusboard.theme.v1";
   document.querySelector("#radar-theme-toggle").addEventListener("click", () => {
@@ -141,9 +152,12 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     runFilter: document.querySelector("#radar-run-filter"),
     list: document.querySelector("#radar-list"),
     empty: document.querySelector("#radar-empty"),
+    refreshBtn: document.querySelector("#radar-refresh"),
+    refreshStatus: document.querySelector("#radar-refresh-status"),
   };
 
   let radar = null; // nodo jobRadar completo: { latest, runs }
+  let visibleJobs = []; // ofertas actualmente renderizadas (para el botón de CV)
 
   const fmtDate = (iso) =>
     new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -210,9 +224,10 @@ import RadarLayout from "../layouts/RadarLayout.astro";
       (!source || j.source === source) &&
       (!text || `${j.title} ${j.company}`.toLowerCase().includes(text))
     );
+    visibleJobs = jobs;
 
     els.list.innerHTML = jobs
-      .map((j) => {
+      .map((j, idx) => {
         const band = j.score >= 75 ? "score-high" : j.score >= 60 ? "score-mid" : "score-low";
         const salaryClass = j.salaryCop ? "salary-chip salary-ok" : "salary-chip";
         return `
@@ -228,6 +243,9 @@ import RadarLayout from "../layouts/RadarLayout.astro";
             <span class="${salaryClass}">${salaryLabel(j)}</span>
             <span class="job-date">${j.datePosted || ""}</span>
           </div>
+          <button class="cv-btn" type="button" data-cv-idx="${idx}">
+            Generar CV a medida (PDF)
+          </button>
         </article>`;
       })
       .join("");
@@ -241,12 +259,80 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     el.addEventListener("input", render);
   }
 
+  // Botón "Actualizar ahora": escribe una solicitud en RTDB; el watcher local
+  // de job-radar (`python -m jobradar --watch`) la ejecuta y publica. El estado
+  // llega en tiempo real por la misma suscripción onValue.
+  els.refreshBtn.addEventListener("click", async () => {
+    els.refreshBtn.disabled = true;
+    try {
+      await set(ref(db, "jobRadar/refresh/request"), {
+        at: new Date().toISOString(),
+        by: "web",
+      });
+      showRefreshStatus("Solicitud enviada — esperando al radar…");
+    } catch (err) {
+      console.error("Error solicitando actualización:", err);
+      showRefreshStatus("No se pudo enviar la solicitud.");
+      els.refreshBtn.disabled = false;
+    }
+  });
+
+  function showRefreshStatus(text) {
+    els.refreshStatus.textContent = text;
+    els.refreshStatus.hidden = !text;
+  }
+
+  function renderRefresh() {
+    const refresh = radar?.refresh || {};
+    const state = refresh.status?.state;
+    const pending = Boolean(refresh.request);
+    if (state === "running") {
+      els.refreshBtn.disabled = true;
+      showRefreshStatus("Buscando ofertas en vivo… (~2 min)");
+    } else if (pending) {
+      els.refreshBtn.disabled = true;
+      showRefreshStatus("Solicitud en cola — el radar debe estar encendido (`--watch`).");
+    } else if (state === "error") {
+      els.refreshBtn.disabled = false;
+      showRefreshStatus(`Error en la última corrida: ${refresh.status?.message || "?"}`);
+    } else if (state === "done" && refresh.status?.message) {
+      els.refreshBtn.disabled = false;
+      showRefreshStatus(refresh.status.message);
+    } else {
+      els.refreshBtn.disabled = false;
+      showRefreshStatus("");
+    }
+  }
+
+  // Generación de CV a medida: import dinámico para no cargar pdfmake (~1 MB)
+  // hasta el primer clic.
+  els.list.addEventListener("click", async (event) => {
+    const btn = event.target.closest(".cv-btn");
+    if (!btn) return;
+    const job = visibleJobs[Number(btn.dataset.cvIdx)];
+    if (!job) return;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Generando…";
+    try {
+      const { generateCv } = await import("../scripts/cvGenerator.js");
+      const filename = generateCv(job);
+      btn.textContent = `Descargado: ${filename}`;
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3500);
+    } catch (err) {
+      console.error("Error generando CV:", err);
+      btn.textContent = "Error al generar — reintentar";
+      btn.disabled = false;
+    }
+  });
+
   onValue(
     ref(db, "jobRadar"),
     (snapshot) => {
       radar = snapshot.val();
       if (radar?.latest) hydrateControls(currentRun() || radar.latest);
       render();
+      renderRefresh();
     },
     () => {
       els.updated.textContent = "Sin conexión";
