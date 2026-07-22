@@ -1,0 +1,256 @@
+---
+// Radar de empleo: top diario de ofertas publicado por job-radar en
+// Realtime Database (nodo jobRadar). Solo lectura desde el cliente.
+import RadarLayout from "../layouts/RadarLayout.astro";
+---
+
+<RadarLayout
+  title="Radar de empleo · focusboard"
+  description="Top diario de ofertas laborales remotas ajustadas al perfil."
+>
+  <div class="app-shell" id="top">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Volver al tablero">
+        <span class="brand-mark" aria-hidden="true">✓</span>
+        <span>focusboard</span>
+      </a>
+      <div class="topbar-actions">
+        <a class="secondary-button" href="/">Tablero</a>
+        <button class="icon-button" id="radar-theme-toggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36-6.36-1.42 1.42M7.05 16.95l-1.42 1.42m12.73 0-1.42-1.42M7.05 7.05 5.64 5.64M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="hero radar-hero">
+      <div>
+        <p class="eyebrow">RADAR DE EMPLEO</p>
+        <h1>Top del día para tu perfil</h1>
+        <p class="hero-copy">
+          Ofertas 100% remotas de QA Automation y Full Stack en Colombia, LatAm y
+          España, filtradas por tus criterios y actualizadas cada mañana.
+        </p>
+      </div>
+      <div class="focus-card">
+        <p>Última corrida</p>
+        <strong id="radar-updated">Cargando…</strong>
+        <span id="radar-floor"></span>
+      </div>
+    </section>
+
+    <section class="dashboard radar-metrics" aria-label="Métricas del radar">
+      <article class="metric-card">
+        <span class="metric-label">Ofertas encontradas</span>
+        <strong id="radar-found">—</strong>
+      </article>
+      <article class="metric-card metric-card-success">
+        <span class="metric-label">Nuevas hoy</span>
+        <strong id="radar-new">—</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Descartadas por filtros</span>
+        <strong id="radar-discarded">—</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Fuentes activas</span>
+        <strong id="radar-sources">—</strong>
+      </article>
+    </section>
+
+    <div class="board-controls radar-controls">
+      <label class="search-field">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.3-4.3M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" /></svg>
+        <input id="radar-search" type="search" placeholder="Filtrar por rol o empresa" autocomplete="off" />
+      </label>
+      <label class="filter-field">
+        <span class="sr-only">Fuente</span>
+        <select id="radar-source-filter"><option value="">Todas las fuentes</option></select>
+      </label>
+      <label class="filter-field">
+        <span class="sr-only">Score mínimo</span>
+        <select id="radar-score-filter">
+          <option value="0">Cualquier score</option>
+          <option value="60">Score 60+</option>
+          <option value="75">Score 75+</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span class="sr-only">Día</span>
+        <select id="radar-run-filter"><option value="latest">Hoy (última corrida)</option></select>
+      </label>
+    </div>
+
+    <section id="radar-list" class="radar-list" aria-live="polite"></section>
+    <p id="radar-empty" class="radar-empty" hidden>
+      Aún no hay datos del radar. Corre <code>job-radar</code> con
+      <code>--publish</code> o espera la próxima corrida automática.
+    </p>
+  </div>
+</RadarLayout>
+
+<style is:global>
+  /* is:global porque las tarjetas se inyectan con innerHTML y no reciben el
+     atributo de scope de Astro; los selectores van prefijados para no chocar. */
+  .radar-hero { padding-bottom: 28px; }
+  .radar-metrics { margin-bottom: 6px; }
+  .radar-controls { flex-wrap: wrap; }
+  .radar-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 14px; padding-top: 6px; }
+  .radar-empty { padding: 40px 0; color: var(--muted); text-align: center; }
+
+  .job-card { display: flex; flex-direction: column; gap: 9px; padding: 16px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--line) 85%, transparent); border-radius: 12px; box-shadow: 0 3px 10px rgba(25, 38, 32, .035); transition: transform .16s ease, box-shadow .16s ease; }
+  .job-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .job-card-top { display: flex; align-items: center; gap: 7px; }
+  .score-badge { padding: 3px 8px; border-radius: 999px; font-family: "DM Mono", monospace; font-size: .68rem; font-weight: 500; }
+  .score-high { background: var(--accent-soft); color: var(--accent-dark); }
+  .score-mid { background: var(--yellow-soft); color: #996608; }
+  [data-theme="dark"] .score-mid { color: var(--yellow); }
+  .score-low { background: var(--surface-muted); color: var(--muted); }
+  .source-tag { padding: 3px 7px; border-radius: 5px; background: var(--surface-muted); color: var(--muted); font-size: .68rem; }
+  .new-dot { margin-left: auto; padding: 3px 7px; border-radius: 999px; background: var(--purple-soft); color: var(--purple); font-size: .66rem; font-weight: 600; }
+  .job-card h3 { margin: 0; font-size: .98rem; line-height: 1.35; letter-spacing: -.015em; }
+  .job-card h3 a { color: var(--text); text-decoration: none; }
+  .job-card h3 a:hover { color: var(--accent); text-decoration: underline; }
+  .job-meta { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.4; }
+  .job-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 4px; }
+  .salary-chip { padding: 3px 8px; border-radius: 6px; background: var(--surface-muted); color: var(--muted); font-family: "DM Mono", monospace; font-size: .72rem; }
+  .salary-ok { background: var(--accent-soft); color: var(--accent-dark); font-weight: 500; }
+  .job-date { color: var(--muted); font-size: .74rem; }
+</style>
+
+<script>
+  import { db } from "../scripts/firebase.js";
+  import { ref, onValue } from "firebase/database";
+
+  const THEME_KEY = "focusboard.theme.v1";
+  document.querySelector("#radar-theme-toggle").addEventListener("click", () => {
+    const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  });
+
+  const els = {
+    updated: document.querySelector("#radar-updated"),
+    floor: document.querySelector("#radar-floor"),
+    found: document.querySelector("#radar-found"),
+    newCount: document.querySelector("#radar-new"),
+    discarded: document.querySelector("#radar-discarded"),
+    sources: document.querySelector("#radar-sources"),
+    search: document.querySelector("#radar-search"),
+    sourceFilter: document.querySelector("#radar-source-filter"),
+    scoreFilter: document.querySelector("#radar-score-filter"),
+    runFilter: document.querySelector("#radar-run-filter"),
+    list: document.querySelector("#radar-list"),
+    empty: document.querySelector("#radar-empty"),
+  };
+
+  let radar = null; // nodo jobRadar completo: { latest, runs }
+
+  const fmtDate = (iso) =>
+    new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+      .format(new Date(iso));
+
+  const fmtDay = (day) =>
+    new Intl.DateTimeFormat("es-CO", { weekday: "short", day: "numeric", month: "short" })
+      .format(new Date(`${day}T12:00:00`));
+
+  function currentRun() {
+    if (!radar) return null;
+    const key = els.runFilter.value;
+    return key === "latest" ? radar.latest : radar.runs?.[key] || radar.latest;
+  }
+
+  function salaryLabel(job) {
+    if (job.salaryCop) {
+      const m = (job.salaryCop / 1e6).toFixed(1).replace(".", ",");
+      return `${m}M COP${job.currency && job.currency !== "COP" ? ` · ${job.currency}` : ""}`;
+    }
+    return job.salaryText || "Salario s/d";
+  }
+
+  function hydrateControls(run) {
+    const sources = [...new Set((run.jobs || []).map((j) => j.source))].sort();
+    const selected = els.sourceFilter.value;
+    els.sourceFilter.length = 1;
+    for (const s of sources) els.sourceFilter.add(new Option(s, s));
+    els.sourceFilter.value = sources.includes(selected) ? selected : "";
+
+    const runKeys = Object.keys(radar.runs || {}).sort().reverse();
+    const selectedRun = els.runFilter.value;
+    els.runFilter.length = 1;
+    for (const k of runKeys) els.runFilter.add(new Option(fmtDay(k), k));
+    if ([...els.runFilter.options].some((o) => o.value === selectedRun)) {
+      els.runFilter.value = selectedRun;
+    }
+  }
+
+  function render() {
+    const run = currentRun();
+    if (!run || !run.jobs?.length) {
+      els.list.innerHTML = "";
+      els.empty.hidden = false;
+      els.updated.textContent = "Sin datos";
+      return;
+    }
+    els.empty.hidden = true;
+
+    els.updated.textContent = fmtDate(run.updated);
+    els.floor.textContent = `Piso salarial: ${(run.floorCop / 1e6).toFixed(1).replace(".", ",")}M COP/mes`;
+    els.found.textContent = run.stats?.found ?? "—";
+    els.newCount.textContent = run.stats?.new ?? "—";
+    els.discarded.textContent = run.stats?.discarded ?? "—";
+    const srcStats = run.stats?.sources || {};
+    els.sources.textContent = `${Object.values(srcStats).filter((n) => n > 0).length}/${Object.keys(srcStats).length || "—"}`;
+
+    const text = els.search.value.trim().toLowerCase();
+    const minScore = Number(els.scoreFilter.value);
+    const source = els.sourceFilter.value;
+
+    const jobs = (run.jobs || []).filter((j) =>
+      j.score >= minScore &&
+      (!source || j.source === source) &&
+      (!text || `${j.title} ${j.company}`.toLowerCase().includes(text))
+    );
+
+    els.list.innerHTML = jobs
+      .map((j) => {
+        const band = j.score >= 75 ? "score-high" : j.score >= 60 ? "score-mid" : "score-low";
+        const salaryClass = j.salaryCop ? "salary-chip salary-ok" : "salary-chip";
+        return `
+        <article class="job-card">
+          <div class="job-card-top">
+            <span class="score-badge ${band}">${j.score} pts</span>
+            <span class="source-tag">${j.source}</span>
+            ${j.isNew ? '<span class="new-dot">Nueva</span>' : ""}
+          </div>
+          <h3><a href="${j.url}" target="_blank" rel="noopener noreferrer">${j.title}</a></h3>
+          <p class="job-meta">${j.company}${j.location ? ` · ${j.location}` : ""}</p>
+          <div class="job-footer">
+            <span class="${salaryClass}">${salaryLabel(j)}</span>
+            <span class="job-date">${j.datePosted || ""}</span>
+          </div>
+        </article>`;
+      })
+      .join("");
+
+    if (!jobs.length) {
+      els.list.innerHTML = `<p class="radar-empty">Nada coincide con los filtros.</p>`;
+    }
+  }
+
+  for (const el of [els.search, els.sourceFilter, els.scoreFilter, els.runFilter]) {
+    el.addEventListener("input", render);
+  }
+
+  onValue(
+    ref(db, "jobRadar"),
+    (snapshot) => {
+      radar = snapshot.val();
+      if (radar?.latest) hydrateControls(currentRun() || radar.latest);
+      render();
+    },
+    () => {
+      els.updated.textContent = "Sin conexión";
+      els.empty.hidden = false;
+    }
+  );
+</script>
