@@ -16,8 +16,13 @@ export const profile = {
     { name: "Inglés", level: "B2 escrito / lectura técnica" },
   ],
 
-  // Dos "pistas" de perfil: el generador elige según las keywords de la oferta.
+  // Tres "pistas" de perfil: el generador elige según las keywords de la oferta.
   tracks: {
+    sre: {
+      headline: "Ingeniero SRE · Monitoreo y Observabilidad",
+      summary:
+        "Ingeniero SRE / administrador de monitoreo y observabilidad en entornos MSP ({skills}). Opero OpManager MSP, VSA X, IT Glue y ConnectWise PSA, gestiono servicios en Azure y ejecuto despliegues CI/CD velando por el ciclo de vida del software. Base como desarrollador y en automatización de pruebas. Trabajo 100% remoto.",
+    },
     qa: {
       headline: "QA Automation Engineer · Playwright & Python",
       summary:
@@ -33,6 +38,9 @@ export const profile = {
   skills: [
     { name: "Playwright (E2E)", tags: ["playwright", "qa", "test", "automation", "e2e", "sdet", "automatiza"], weight: 10 },
     { name: "Python (automatización y datos)", tags: ["python", "scripting", "data", "automation"], weight: 9 },
+    { name: "Monitoreo y Observabilidad (OpManager MSP, VSA X)", tags: ["monitoring", "observability", "observabilidad", "monitoreo", "opmanager", "vsa", "vsax", "rmm", "sre", "site reliability", "reliability", "alerting", "uptime", "noc", "msp"], weight: 9 },
+    { name: "Azure · servicios cloud", tags: ["azure", "cloud", "portal", "iaas", "paas", "sre", "devops"], weight: 7 },
+    { name: "ConnectWise PSA · IT Glue (MSP)", tags: ["connectwise", "psa", "itglue", "it glue", "msp", "documentation", "ticketing", "itsm"], weight: 6 },
     { name: "QA manual · casos y reportes de prueba", tags: ["qa", "manual", "testing", "test", "reporte", "user stories", "analista", "quality"], weight: 8 },
     { name: "Google Apps Script (ETL)", tags: ["apps script", "google", "etl", "data"], weight: 7 },
     { name: "Angular", tags: ["angular", "frontend", "spa", "typescript"], weight: 8 },
@@ -41,19 +49,20 @@ export const profile = {
     { name: "TypeScript / JavaScript", tags: ["typescript", "javascript", "js", "ts"], weight: 8 },
     { name: "SQL Server · MongoDB · Firebase", tags: ["sql", "sql server", "mongodb", "firebase", "database", "nosql", "postgres"], weight: 6 },
     { name: "Java (Android nativo)", tags: ["java", "android", "mobile", "movil"], weight: 6 },
-    { name: "Git · CI/CD · Azure DevOps", tags: ["git", "ci", "cd", "ci-cd", "ci/cd", "azure", "devops", "pipeline", "github"], weight: 7 },
+    { name: "Git · CI/CD · Azure DevOps", tags: ["git", "ci", "cd", "ci-cd", "ci/cd", "azure", "devops", "pipeline", "github", "deployment", "despliegue", "sre", "reliability"], weight: 7 },
     { name: "Scrum / metodologías ágiles", tags: ["scrum", "agile", "ágil", "agil", "kanban", "jira"], weight: 5 },
   ],
 
   experience: [
     {
-      role: "QA Automation Consultant",
+      role: "Consultor de TI (SRE / Observabilidad)",
       company: "Intwo",
       period: "Oct 2025 – Actualidad",
       bullets: [
-        { text: "Diseño y mantengo scripts y suites de prueba E2E automatizados con Playwright para plataformas MSP.", tags: ["playwright", "qa", "e2e", "automation", "test"] },
-        { text: "Construyo automatizaciones de procesos con Python y Flet para procesos internos de la plataforma.", tags: ["python", "automation", "scripting"] },
-        { text: "Desarrollo procesos ETL con Google Apps Script para integrar datos entre plataformas MSP.", tags: ["apps script", "etl", "data", "google"] },
+        { text: "Administro el monitoreo y la observabilidad de plataformas MSP con OpManager MSP y VSA X, con visibilidad de disponibilidad y alertas.", tags: ["monitoring", "observability", "observabilidad", "monitoreo", "opmanager", "vsa", "rmm", "sre", "alerting", "msp", "reliability"] },
+        { text: "Opero la documentación y gestión de clientes con IT Glue y ConnectWise PSA.", tags: ["itglue", "connectwise", "psa", "documentation", "msp", "ticketing"] },
+        { text: "Opero servicios en el portal de Azure y ejecuto despliegues mediante CI/CD, velando por el cumplimiento del ciclo de vida del software en el área de monitoreo.", tags: ["azure", "cloud", "ci", "cd", "ci-cd", "devops", "deployment", "sdlc", "sre"] },
+        { text: "Automatizo procesos internos con Python y Playwright para reducir tareas repetitivas.", tags: ["python", "playwright", "automation", "scripting"] },
       ],
     },
     {

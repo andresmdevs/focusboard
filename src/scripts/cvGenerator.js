@@ -26,13 +26,23 @@ function matchCount(tags, haystack) {
   return tags.reduce((acc, tag) => acc + (haystack.includes(norm(tag)) ? 1 : 0), 0);
 }
 
-/** Elige la pista (QA vs Dev) según las señales del título de la oferta. */
+/** Elige la pista (SRE / QA / Dev) según las señales del título de la oferta. */
 function pickTrack(haystack) {
-  const qa = ["qa", "test", "sdet", "quality", "automation", "playwright", "automatiza"];
-  const dev = ["developer", "desarrollador", "full stack", "fullstack", "frontend", "backend", "angular", "react", "node", "mobile", "movil", "software engineer", "ingeniero de software"];
-  const qaScore = matchCount(qa, haystack);
-  const devScore = matchCount(dev, haystack);
-  return devScore > qaScore ? "dev" : "qa";
+  const signals = {
+    sre: ["sre", "site reliability", "observability", "observabilidad", "monitoring",
+          "monitoreo", "devops", "infrastructure", "infraestructura", "reliability",
+          "noc", "incident", "on-call", "platform engineer", "cloud engineer",
+          "kubernetes", "terraform", "opmanager", "msp"],
+    qa: ["qa", "test", "sdet", "quality", "automation", "playwright", "automatiza",
+         "tester", "testing"],
+    dev: ["developer", "desarrollador", "full stack", "fullstack", "frontend",
+          "backend", "angular", "react", "node", "mobile", "movil",
+          "software engineer", "ingeniero de software"],
+  };
+  const ranked = Object.entries(signals)
+    .map(([track, kws]) => [track, matchCount(kws, haystack)])
+    .sort((a, b) => b[1] - a[1]);
+  return ranked[0][1] > 0 ? ranked[0][0] : "qa";
 }
 
 /** Skills ordenadas por relevancia para la oferta (las que matchean, primero). */
