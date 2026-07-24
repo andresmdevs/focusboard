@@ -1,5 +1,6 @@
 import { db } from "./firebase.js";
 import { ref, onValue, set, update, remove } from "firebase/database";
+import { registerServiceWorker } from "./sw.js";
 
 const THEME_KEY = "focusboard.theme.v1";
 const tasksRef = ref(db, "tasks");
@@ -327,6 +328,7 @@ setTodayLabel();
 render();
 subscribeTasks();
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js"));
-}
+// Solo en producción: en `astro dev` el SW cachea agresivamente y sirve JS/CSS
+// viejo tras cada cambio, incluso en páginas que no lo registran directamente
+// (su scope es "/", así que cubre todo el origen una vez instalado).
+registerServiceWorker();

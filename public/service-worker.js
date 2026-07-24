@@ -9,7 +9,10 @@
 // Así la app abre offline tras la primera visita y siempre sirve HTML
 // fresco cuando hay conexión.
 
-const CACHE_NAME = "focusboard-v3";
+// Sube este número en cada cambio que deba invalidar el caché: al activarse el
+// nuevo service worker se borran los caches con nombre distinto, evitando que
+// el navegador siga sirviendo una versión vieja de la app tras un despliegue.
+const CACHE_NAME = "focusboard-v8";
 const OFFLINE_URL = "/";
 
 self.addEventListener("install", () => {

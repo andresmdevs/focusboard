@@ -43,6 +43,12 @@
   --shadow: 0 12px 35px rgba(0, 0, 0, .2);
 }
 
+/* El atributo hidden debe ganar siempre sobre cualquier `display` de clase o
+   ID declarado más abajo (p. ej. .gate-phone-form, .radar-gate) - sin esto,
+   una clase con `display: grid/flex/block` puede tener más especificidad que
+   el selector [hidden] del navegador y el elemento se muestra igual. */
+[hidden] { display: none !important; }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); font-family: "DM Sans", system-ui, sans-serif; }

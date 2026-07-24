@@ -16,12 +16,65 @@ import RadarLayout from "../layouts/RadarLayout.astro";
       </a>
       <div class="topbar-actions">
         <a class="secondary-button" href="/">Tablero</a>
+        <button class="secondary-button" id="radar-logout" type="button" hidden>Salir</button>
         <button class="icon-button" id="radar-theme-toggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36-6.36-1.42 1.42M7.05 16.95l-1.42 1.42m12.73 0-1.42-1.42M7.05 7.05 5.64 5.64M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" /></svg>
         </button>
       </div>
     </header>
 
+    <section class="radar-gate" id="radar-gate">
+      <div class="gate-card">
+        <p class="eyebrow">ACCESO PRIVADO</p>
+        <h2>Radar de empleo</h2>
+        <p class="gate-copy" id="radar-gate-copy">Verificando sesión…</p>
+
+        <button class="primary-button" id="radar-login" type="button" hidden>
+          Iniciar sesión con Google
+        </button>
+
+        <button class="text-button gate-toggle" id="radar-gate-show-phone" type="button" hidden>
+          O inicia sesión con tu número de teléfono
+        </button>
+
+        <form class="gate-phone-form" id="radar-phone-form" hidden>
+          <label class="sr-only" for="radar-phone-input">Número de teléfono</label>
+          <input
+            id="radar-phone-input"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="+57 300 000 0000"
+          />
+          <button class="primary-button" id="radar-phone-send" type="submit">
+            Enviar código
+          </button>
+
+          <div class="gate-phone-code" id="radar-phone-code-group" hidden>
+            <label class="sr-only" for="radar-phone-code">Código recibido por SMS</label>
+            <input
+              id="radar-phone-code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              placeholder="Código de 6 dígitos"
+              maxlength="6"
+            />
+            <button class="primary-button" id="radar-phone-verify" type="button">
+              Verificar código
+            </button>
+          </div>
+
+          <button class="text-button gate-toggle" id="radar-gate-show-google" type="button" hidden>
+            ← Volver a Google
+          </button>
+        </form>
+
+        <div id="radar-recaptcha-container"></div>
+      </div>
+    </section>
+
+    <div id="radar-content" hidden>
     <section class="hero radar-hero">
       <div>
         <p class="eyebrow">RADAR DE EMPLEO</p>
@@ -61,6 +114,63 @@ import RadarLayout from "../layouts/RadarLayout.astro";
       </article>
     </section>
 
+    <details class="settings-panel" id="radar-settings">
+      <summary>⚙ Parámetros de búsqueda</summary>
+      <div class="settings-body">
+        <p class="settings-hint">
+          Los cambios se aplican en la próxima corrida del radar (automática o vía
+          "Actualizar ahora"), no reordenan la tabla de abajo al instante.
+        </p>
+
+        <div class="settings-grid">
+          <div class="settings-row">
+            <label for="settings-language">Idioma de las ofertas</label>
+            <select id="settings-language">
+              <option value="any">Cualquiera</option>
+              <option value="es">Solo español</option>
+              <option value="en">Solo inglés</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <label for="settings-salary">Piso salarial (COP/mes)</label>
+            <input id="settings-salary" type="number" step="500000" min="0" />
+          </div>
+        </div>
+
+        <div class="settings-row settings-row-full">
+          <label>Fuentes activas</label>
+          <div class="settings-checkboxes" id="settings-sources"></div>
+        </div>
+
+        <div class="settings-row settings-row-full">
+          <label>Consultas de búsqueda personalizadas</label>
+          <div class="settings-tags" id="settings-queries"></div>
+          <div class="settings-add-row">
+            <input id="settings-query-input" type="text" placeholder="ej. platform engineer" />
+            <button class="secondary-button" id="settings-query-add" type="button">Agregar</button>
+          </div>
+        </div>
+
+        <div class="settings-row settings-row-full">
+          <label>
+            Solicitar un portal nuevo — no es scraping automático: cada portal
+            requiere revisión manual antes de integrarse (como Computrabajo o
+            elempleo.com), esto solo deja tu solicitud anotada.
+          </label>
+          <div class="settings-tags" id="settings-portals"></div>
+          <div class="settings-add-row">
+            <input id="settings-portal-input" type="text" placeholder="Nombre o URL, ej. InfoJobs España" />
+            <button class="secondary-button" id="settings-portal-add" type="button">Solicitar</button>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <button class="primary-button" id="settings-save" type="button">Guardar parámetros</button>
+          <span id="settings-status" class="settings-status" aria-live="polite"></span>
+        </div>
+      </div>
+    </details>
+
     <div class="board-controls radar-controls">
       <label class="search-field">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.3-4.3M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" /></svg>
@@ -89,12 +199,25 @@ import RadarLayout from "../layouts/RadarLayout.astro";
       Aún no hay datos del radar. Corre <code>job-radar</code> con
       <code>--publish</code> o espera la próxima corrida automática.
     </p>
+    </div>
   </div>
 </RadarLayout>
 
 <style is:global>
   /* is:global porque las tarjetas se inyectan con innerHTML y no reciben el
      atributo de scope de Astro; los selectores van prefijados para no chocar. */
+  .radar-gate { display: grid; place-items: center; min-height: 62vh; padding: 40px 0; }
+  .gate-card { max-width: 430px; padding: 34px 32px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); text-align: center; }
+  .gate-card h2 { margin: 0 0 10px; font-family: Fraunces, Georgia, serif; font-size: 1.9rem; font-weight: 600; letter-spacing: -.04em; }
+  .gate-copy { margin-bottom: 20px; color: var(--muted); font-size: .93rem; line-height: 1.5; }
+  .gate-copy.is-error { color: var(--red); }
+  #radar-login { width: 100%; }
+  .gate-toggle { display: block; width: 100%; margin-top: 12px; text-align: center; }
+  .gate-phone-form { display: grid; gap: 10px; margin-top: 14px; }
+  .gate-phone-form input { width: 100%; height: 42px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); text-align: center; font-size: .95rem; }
+  .gate-phone-code { display: grid; gap: 10px; }
+  #radar-recaptcha-container { display: flex; justify-content: center; margin-top: 10px; }
+
   .radar-hero { padding-bottom: 28px; }
   .radar-metrics { margin-bottom: 6px; }
   .radar-controls { flex-wrap: wrap; }
@@ -126,11 +249,43 @@ import RadarLayout from "../layouts/RadarLayout.astro";
   .refresh-btn:hover { background: rgba(255,255,255,.22); }
   .refresh-btn:disabled { opacity: .6; cursor: default; }
   .refresh-status { display: block; margin-top: 7px; font-size: .74rem; color: #d9f0e7; }
+  .refresh-status.is-warning { color: #ffe1b3; font-weight: 600; }
+
+  .settings-panel { margin: 6px 0 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; }
+  .settings-panel summary { padding: 14px 18px; font-weight: 600; font-size: .92rem; cursor: pointer; list-style: none; }
+  .settings-panel summary::-webkit-details-marker { display: none; }
+  .settings-panel[open] summary { border-bottom: 1px solid var(--line); }
+  .settings-body { padding: 18px; display: grid; gap: 16px; }
+  .settings-hint { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.4; }
+  .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .settings-row { display: grid; gap: 6px; }
+  .settings-row label { font-size: .82rem; color: var(--muted); font-weight: 600; }
+  .settings-row select, .settings-row input[type="number"] { height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); font-size: .9rem; }
+  .settings-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .settings-check { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; font-size: .82rem; cursor: pointer; user-select: none; }
+  .settings-check input { accent-color: var(--accent); }
+  .settings-tags { display: flex; flex-wrap: wrap; gap: 8px; min-height: 4px; }
+  .settings-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--surface-muted); border-radius: 999px; font-size: .78rem; }
+  .settings-tag button { border: 0; background: transparent; color: var(--muted); font-size: 1rem; line-height: 1; cursor: pointer; padding: 0; }
+  .settings-tag button:hover { color: var(--red); }
+  .settings-add-row { display: flex; gap: 8px; }
+  .settings-add-row input { flex: 1; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); font-size: .86rem; }
+  .settings-footer { display: flex; align-items: center; gap: 12px; }
+  .settings-status { font-size: .8rem; color: var(--muted); }
+  .settings-status.is-error { color: var(--red); }
+  .settings-status.is-ok { color: var(--accent); }
 </style>
 
 <script>
   import { db } from "../scripts/firebase.js";
   import { ref, onValue, set } from "firebase/database";
+  import {
+    auth, isAllowed, watchSession, login, logout,
+    consumeRedirectResult, sendPhoneCode, confirmPhoneCode,
+  } from "../scripts/auth.js";
+  import { registerServiceWorker } from "../scripts/sw.js";
+
+  registerServiceWorker();
 
   const THEME_KEY = "focusboard.theme.v1";
   document.querySelector("#radar-theme-toggle").addEventListener("click", () => {
@@ -154,10 +309,57 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     empty: document.querySelector("#radar-empty"),
     refreshBtn: document.querySelector("#radar-refresh"),
     refreshStatus: document.querySelector("#radar-refresh-status"),
+    gate: document.querySelector("#radar-gate"),
+    gateCopy: document.querySelector("#radar-gate-copy"),
+    loginBtn: document.querySelector("#radar-login"),
+    logoutBtn: document.querySelector("#radar-logout"),
+    content: document.querySelector("#radar-content"),
+    showPhoneBtn: document.querySelector("#radar-gate-show-phone"),
+    showGoogleBtn: document.querySelector("#radar-gate-show-google"),
+    phoneForm: document.querySelector("#radar-phone-form"),
+    phoneInput: document.querySelector("#radar-phone-input"),
+    phoneSendBtn: document.querySelector("#radar-phone-send"),
+    phoneCodeGroup: document.querySelector("#radar-phone-code-group"),
+    phoneCodeInput: document.querySelector("#radar-phone-code"),
+    phoneVerifyBtn: document.querySelector("#radar-phone-verify"),
+    settingsLanguage: document.querySelector("#settings-language"),
+    settingsSalary: document.querySelector("#settings-salary"),
+    settingsSources: document.querySelector("#settings-sources"),
+    settingsQueries: document.querySelector("#settings-queries"),
+    settingsQueryInput: document.querySelector("#settings-query-input"),
+    settingsQueryAdd: document.querySelector("#settings-query-add"),
+    settingsPortals: document.querySelector("#settings-portals"),
+    settingsPortalInput: document.querySelector("#settings-portal-input"),
+    settingsPortalAdd: document.querySelector("#settings-portal-add"),
+    settingsSave: document.querySelector("#settings-save"),
+    settingsStatus: document.querySelector("#settings-status"),
   };
 
-  let radar = null; // nodo jobRadar completo: { latest, runs }
+  let radar = null; // nodo jobRadar completo: { latest, runs, settings, refresh }
   let visibleJobs = []; // ofertas actualmente renderizadas (para el botón de CV)
+
+  // Servicio job-radar en Render (capa gratuita). Vacío = solo watcher local.
+  // Tras desplegar en Render, pega aquí la URL, p. ej. "https://job-radar.onrender.com".
+  // El botón escribe la solicitud en Firebase y hace ping a este endpoint para
+  // despertar el servicio dormido (cold start ~50s); el resto lo maneja Firebase.
+  const REFRESH_ENDPOINT = "";
+
+  // --- Panel de parámetros --------------------------------------------------
+  // Fuentes que job-radar tiene registradas (jobradar/sources/*.py). Si algún
+  // día se agrega una nueva fuente ahí, añadirla también aquí para que el
+  // panel la ofrezca como opción.
+  const KNOWN_SOURCES = [
+    { id: "linkedin", label: "LinkedIn" },
+    { id: "computrabajo", label: "Computrabajo (Colombia)" },
+    { id: "elempleo", label: "elempleo.com (Colombia)" },
+    { id: "getonbrd", label: "GetOnBoard (LatAm)" },
+    { id: "freehire", label: "Freehire (LatAm + España)" },
+  ];
+  // Listas editables en memoria; solo se escriben a Firebase al pulsar
+  // "Guardar parámetros" (evita escrituras parciales mientras se editan).
+  let draftQueries = [];
+  let draftPortalRequests = [];
+  let settingsHydrated = false; // evita pisar lo que el usuario está editando
 
   const fmtDate = (iso) =>
     new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -196,6 +398,113 @@ import RadarLayout from "../layouts/RadarLayout.astro";
       els.runFilter.value = selectedRun;
     }
   }
+
+  // --- Panel de parámetros ---------------------------------------------------
+
+  function renderTagList(container, items, onRemove) {
+    container.innerHTML = items
+      .map((text, idx) => `
+        <span class="settings-tag">
+          ${text}
+          <button type="button" data-idx="${idx}" aria-label="Quitar">×</button>
+        </span>`)
+      .join("");
+    container.querySelectorAll("button").forEach((btn) =>
+      btn.addEventListener("click", () => onRemove(Number(btn.dataset.idx)))
+    );
+  }
+
+  function renderQueryTags() {
+    renderTagList(els.settingsQueries, draftQueries, (idx) => {
+      draftQueries.splice(idx, 1);
+      renderQueryTags();
+    });
+  }
+
+  function renderPortalTags() {
+    renderTagList(els.settingsPortals, draftPortalRequests, (idx) => {
+      draftPortalRequests.splice(idx, 1);
+      renderPortalTags();
+    });
+  }
+
+  // Puebla el formulario desde jobRadar/settings. Solo la primera vez que
+  // llegan datos (settingsHydrated) - así no se pisa lo que el usuario está
+  // escribiendo si Firebase reenvía el mismo nodo mientras edita.
+  function hydrateSettingsForm(settings) {
+    if (settingsHydrated) return;
+    settingsHydrated = true;
+    const s = settings || {};
+
+    els.settingsLanguage.value = s.language || "any";
+    els.settingsSalary.value = s.salaryFloorCop || 7000000;
+
+    const enabled = new Set(s.enabledSources?.length ? s.enabledSources : KNOWN_SOURCES.map((k) => k.id));
+    els.settingsSources.innerHTML = KNOWN_SOURCES.map(({ id, label }) => `
+      <label class="settings-check">
+        <input type="checkbox" value="${id}" ${enabled.has(id) ? "checked" : ""} />
+        ${label}
+      </label>`).join("");
+
+    draftQueries = [...(s.customQueries || [])];
+    draftPortalRequests = [...(s.portalRequests || [])];
+    renderQueryTags();
+    renderPortalTags();
+  }
+
+  els.settingsQueryAdd.addEventListener("click", () => {
+    const value = els.settingsQueryInput.value.trim();
+    if (!value || draftQueries.includes(value)) return;
+    draftQueries.push(value);
+    els.settingsQueryInput.value = "";
+    renderQueryTags();
+  });
+  els.settingsQueryInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); els.settingsQueryAdd.click(); }
+  });
+
+  els.settingsPortalAdd.addEventListener("click", () => {
+    const value = els.settingsPortalInput.value.trim();
+    if (!value || draftPortalRequests.includes(value)) return;
+    draftPortalRequests.push(value);
+    els.settingsPortalInput.value = "";
+    renderPortalTags();
+  });
+  els.settingsPortalInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); els.settingsPortalAdd.click(); }
+  });
+
+  els.settingsSave.addEventListener("click", async () => {
+    const enabledSources = [...els.settingsSources.querySelectorAll("input:checked")]
+      .map((cb) => cb.value);
+    if (!enabledSources.length) {
+      els.settingsStatus.textContent = "Activa al menos una fuente.";
+      els.settingsStatus.className = "settings-status is-error";
+      return;
+    }
+    const payload = {
+      language: els.settingsLanguage.value,
+      salaryFloorCop: Number(els.settingsSalary.value) || 7000000,
+      enabledSources,
+      customQueries: draftQueries,
+      portalRequests: draftPortalRequests,
+      updatedAt: new Date().toISOString(),
+    };
+    els.settingsSave.disabled = true;
+    els.settingsStatus.textContent = "Guardando…";
+    els.settingsStatus.className = "settings-status";
+    try {
+      await set(ref(db, "jobRadar/settings"), payload);
+      els.settingsStatus.textContent = "Guardado — se aplica en la próxima corrida.";
+      els.settingsStatus.className = "settings-status is-ok";
+    } catch (err) {
+      console.error("Error guardando parámetros:", err);
+      els.settingsStatus.textContent = "No se pudo guardar. Intenta de nuevo.";
+      els.settingsStatus.className = "settings-status is-error";
+    } finally {
+      els.settingsSave.disabled = false;
+    }
+  });
 
   function render() {
     const run = currentRun();
@@ -262,24 +571,56 @@ import RadarLayout from "../layouts/RadarLayout.astro";
   // Botón "Actualizar ahora": escribe una solicitud en RTDB; el watcher local
   // de job-radar (`python -m jobradar --watch`) la ejecuta y publica. El estado
   // llega en tiempo real por la misma suscripción onValue.
+  // Vigilante de solicitudes sin respuesta: si nadie procesa el pedido (el
+  // watcher local o el servicio en Render no están encendidos), el botón se
+  // quedaría deshabilitado para siempre sin explicación. WATCHDOG_MS es el
+  // tiempo máximo de espera antes de avisar y liberar el botón.
+  const WATCHDOG_MS = 90_000;
+  let refreshWatchdog = null;
+  let refreshTicker = null;
+  let refreshStartedAt = null;
+
+  function clearRefreshTimers() {
+    if (refreshWatchdog) { clearTimeout(refreshWatchdog); refreshWatchdog = null; }
+    if (refreshTicker) { clearInterval(refreshTicker); refreshTicker = null; }
+  }
+
   els.refreshBtn.addEventListener("click", async () => {
     els.refreshBtn.disabled = true;
+    clearRefreshTimers();
+    refreshStartedAt = Date.now();
+    refreshWatchdog = setTimeout(() => {
+      showRefreshStatus(
+        "El radar no respondió. Verifica que el servicio esté encendido " +
+        "(watcher local o Render) e inténtalo de nuevo.",
+        true
+      );
+      els.refreshBtn.disabled = false;
+      refreshWatchdog = null;
+    }, WATCHDOG_MS);
     try {
       await set(ref(db, "jobRadar/refresh/request"), {
         at: new Date().toISOString(),
         by: "web",
       });
-      showRefreshStatus("Solicitud enviada — esperando al radar…");
+      // Despierta el servicio de Render si está configurado (fire-and-forget:
+      // el cold start tarda ~50s y el progreso llega por la suscripción a status).
+      if (REFRESH_ENDPOINT) {
+        fetch(`${REFRESH_ENDPOINT}/refresh`, { method: "POST" }).catch(() => {});
+      }
+      showRefreshStatus("Solicitud enviada — iniciando búsqueda…");
     } catch (err) {
       console.error("Error solicitando actualización:", err);
-      showRefreshStatus("No se pudo enviar la solicitud.");
+      showRefreshStatus("No se pudo enviar la solicitud.", true);
       els.refreshBtn.disabled = false;
+      clearRefreshTimers();
     }
   });
 
-  function showRefreshStatus(text) {
+  function showRefreshStatus(text, isWarning = false) {
     els.refreshStatus.textContent = text;
     els.refreshStatus.hidden = !text;
+    els.refreshStatus.classList.toggle("is-warning", isWarning);
   }
 
   function renderRefresh() {
@@ -288,17 +629,31 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     const pending = Boolean(refresh.request);
     if (state === "running") {
       els.refreshBtn.disabled = true;
-      showRefreshStatus("Buscando ofertas en vivo… (~2 min)");
+      // Confirmado que un procesador real está trabajando: ya no hace falta
+      // el vigilante de "no respondió", solo el contador de tiempo.
+      if (refreshWatchdog) { clearTimeout(refreshWatchdog); refreshWatchdog = null; }
+      if (!refreshTicker) {
+        if (!refreshStartedAt) refreshStartedAt = Date.now();
+        const tick = () => {
+          const secs = Math.round((Date.now() - refreshStartedAt) / 1000);
+          showRefreshStatus(`Buscando ofertas en vivo… (${secs}s)`);
+        };
+        tick();
+        refreshTicker = setInterval(tick, 1000);
+      }
     } else if (pending) {
       els.refreshBtn.disabled = true;
-      showRefreshStatus("Solicitud en cola — el radar debe estar encendido (`--watch`).");
+      showRefreshStatus("Solicitud en cola — iniciando el radar…");
     } else if (state === "error") {
+      clearRefreshTimers();
       els.refreshBtn.disabled = false;
-      showRefreshStatus(`Error en la última corrida: ${refresh.status?.message || "?"}`);
+      showRefreshStatus(`Error en la última corrida: ${refresh.status?.message || "?"}`, true);
     } else if (state === "done" && refresh.status?.message) {
+      clearRefreshTimers();
       els.refreshBtn.disabled = false;
       showRefreshStatus(refresh.status.message);
     } else {
+      clearRefreshTimers();
       els.refreshBtn.disabled = false;
       showRefreshStatus("");
     }
@@ -326,17 +681,187 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     }
   });
 
-  onValue(
-    ref(db, "jobRadar"),
-    (snapshot) => {
-      radar = snapshot.val();
-      if (radar?.latest) hydrateControls(currentRun() || radar.latest);
-      render();
-      renderRefresh();
-    },
-    () => {
-      els.updated.textContent = "Sin conexión";
-      els.empty.hidden = false;
+  // --- Sesión --------------------------------------------------------------
+  // Los datos del radar solo se leen tras iniciar sesión con la cuenta
+  // autorizada; las reglas de Realtime Database lo exigen del lado servidor.
+  let unsubscribeRadar = null;
+
+  function subscribeRadar() {
+    return onValue(
+      ref(db, "jobRadar"),
+      (snapshot) => {
+        radar = snapshot.val();
+        if (radar?.latest) hydrateControls(currentRun() || radar.latest);
+        hydrateSettingsForm(radar?.settings);
+        render();
+        renderRefresh();
+      },
+      (err) => {
+        console.error("Error leyendo el radar:", err);
+        els.updated.textContent =
+          err.code === "PERMISSION_DENIED" ? "Sin permisos" : "Sin conexión";
+        els.empty.hidden = false;
+      }
+    );
+  }
+
+  function showGate(message, isError = false) {
+    els.gate.hidden = false;
+    els.content.hidden = true;
+    els.logoutBtn.hidden = true;
+    els.gateCopy.textContent = message;
+    els.gateCopy.classList.toggle("is-error", isError);
+  }
+
+  /** Muestra ambas opciones de login (Google + toggle a teléfono), respetando
+   * cuál de los dos formularios está abierto en este momento. */
+  function showLoginOptions() {
+    els.loginBtn.hidden = false;
+    if (els.phoneForm.hidden) els.showPhoneBtn.hidden = false;
+  }
+
+  // login() navega a Google (signInWithRedirect); si falla ANTES de salir de
+  // la página (config inválida, etc.) cae aquí. El resultado del regreso se
+  // procesa más abajo con consumeRedirectResult().
+  els.loginBtn.addEventListener("click", async () => {
+    els.loginBtn.disabled = true;
+    showGate("Redirigiendo a Google…");
+    try {
+      await login();
+    } catch (err) {
+      console.error("Error al iniciar sesión:", err);
+      showGate(`No se pudo iniciar sesión (${err?.code || "error desconocido"}).`, true);
+      showLoginOptions();
+      els.loginBtn.disabled = false;
     }
-  );
+  });
+
+  els.logoutBtn.addEventListener("click", () => logout());
+
+  // --- Login por teléfono (alternativa a Google) ----------------------------
+  // Respaldo cuando Google falla en algún dispositivo (redirect bloqueado,
+  // almacenamiento restringido en Safari privado, etc.) - no depende de
+  // redirects entre dominios, solo de un reCAPTCHA invisible + SMS.
+  let confirmationResult = null;
+
+  els.showPhoneBtn.addEventListener("click", () => {
+    els.loginBtn.hidden = true;
+    els.showPhoneBtn.hidden = true;
+    els.phoneForm.hidden = false;
+    els.showGoogleBtn.hidden = false;
+    els.phoneInput.focus();
+  });
+
+  els.showGoogleBtn.addEventListener("click", () => {
+    els.phoneForm.hidden = true;
+    els.phoneCodeGroup.hidden = true;
+    els.phoneInput.value = "";
+    els.phoneCodeInput.value = "";
+    confirmationResult = null;
+    showLoginOptions();
+  });
+
+  els.phoneForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const raw = els.phoneInput.value.trim();
+    // Normaliza a E.164: conserva el + inicial (si lo hay) y solo dígitos.
+    const phone = (raw.startsWith("+") ? "+" : "") + raw.replace(/\D/g, "");
+    if (phone.replace("+", "").length < 8) {
+      showGate("Escribe un número de teléfono válido, con indicativo de país (ej. +57...).", true);
+      return;
+    }
+    els.phoneSendBtn.disabled = true;
+    els.phoneSendBtn.textContent = "Enviando…";
+    try {
+      confirmationResult = await sendPhoneCode(phone, "radar-recaptcha-container");
+      els.phoneCodeGroup.hidden = false;
+      els.phoneCodeInput.focus();
+      showGate("Código enviado — revisa tus mensajes SMS.");
+    } catch (err) {
+      console.error("Error enviando código SMS:", err);
+      showGate(`No se pudo enviar el código (${err?.code || "error desconocido"}).`, true);
+    } finally {
+      els.phoneSendBtn.disabled = false;
+      els.phoneSendBtn.textContent = "Enviar código";
+    }
+  });
+
+  els.phoneVerifyBtn.addEventListener("click", async () => {
+    const code = els.phoneCodeInput.value.trim();
+    if (!confirmationResult || code.length < 6) {
+      showGate("Escribe el código de 6 dígitos que recibiste por SMS.", true);
+      return;
+    }
+    els.phoneVerifyBtn.disabled = true;
+    els.phoneVerifyBtn.textContent = "Verificando…";
+    try {
+      await confirmPhoneCode(confirmationResult, code);
+      // Éxito: watchSession() detecta la nueva sesión y oculta el gate.
+    } catch (err) {
+      console.error("Error verificando código:", err);
+      showGate(`Código incorrecto o vencido (${err?.code || "error desconocido"}). Intenta de nuevo.`, true);
+    } finally {
+      els.phoneVerifyBtn.disabled = false;
+      els.phoneVerifyBtn.textContent = "Verificar código";
+    }
+  });
+
+  // Al volver de Google tras signInWithRedirect, resuelve o revela el error
+  // real (dominio no autorizado, popup/redirect bloqueado, etc.) en vez de
+  // dejar la pantalla de login sin explicación.
+  consumeRedirectResult().catch((err) => {
+    console.error("Error procesando el resultado del login:", err);
+    showGate(`No se pudo completar el inicio de sesión (${err?.code || "error desconocido"}).`, true);
+    els.loginBtn.hidden = false;
+  });
+
+  // Validador de estado de sesión: única fuente de verdad de si el gate de
+  // login se muestra u oculta. Se dispara con cada cambio de sesión (login,
+  // logout, restauración de sesión persistida al recargar la página) para
+  // que los avisos de "inicia sesión" desaparezcan en cuanto haya una sesión
+  // real y autorizada, y solo entonces.
+  function validateSessionAndRender(user, allowed) {
+    if (allowed) {
+      els.gate.hidden = true;
+      els.content.hidden = false;
+      els.logoutBtn.hidden = false;
+      els.logoutBtn.title = `Sesión: ${user.email || user.phoneNumber}`;
+      if (!unsubscribeRadar) unsubscribeRadar = subscribeRadar();
+      return;
+    }
+
+    if (unsubscribeRadar) {
+      unsubscribeRadar();
+      unsubscribeRadar = null;
+      radar = null;
+      settingsHydrated = false;
+      clearRefreshTimers();
+    }
+
+    // Reinicia el formulario de teléfono al volver a la pantalla de login
+    // (evita quedar con un código vencido tras un fallo o cierre de sesión).
+    els.phoneForm.hidden = true;
+    els.phoneCodeGroup.hidden = true;
+    els.showGoogleBtn.hidden = true;
+    confirmationResult = null;
+
+    if (user?.email) {
+      // Sesión válida de Google, pero no es la cuenta autorizada.
+      showGate(`La cuenta ${user.email} no tiene acceso a esta sección.`, true);
+      els.loginBtn.textContent = "Entrar con otra cuenta";
+    } else if (user?.phoneNumber) {
+      showGate(`El número ${user.phoneNumber} no tiene acceso a esta sección.`, true);
+      els.loginBtn.textContent = "Iniciar sesión con Google";
+    } else {
+      showGate("Esta sección es privada. Inicia sesión para ver el radar.");
+      els.loginBtn.textContent = "Iniciar sesión con Google";
+    }
+    showLoginOptions();
+  }
+
+  // Aplica el estado ya disponible de inmediato (si el navegador restauró una
+  // sesión persistida antes de que este script corriera) y sigue validando
+  // ante cualquier cambio posterior.
+  if (auth.currentUser) validateSessionAndRender(auth.currentUser, isAllowed(auth.currentUser));
+  watchSession(validateSessionAndRender);
 </script>

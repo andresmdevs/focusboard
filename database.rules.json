@@ -1,6 +1,12 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    "tasks": {
+      ".read": true,
+      ".write": true
+    },
+    "jobRadar": {
+      ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')",
+      ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')"
+    }
   }
 }
