@@ -65,9 +65,9 @@ export const profile = {
       company: "Intwo",
       period: "Oct 2025 – Actualidad",
       bullets: [
+        { text: "Opero servicios en el portal de Azure y ejecuto despliegues mediante CI/CD, velando por el cumplimiento del ciclo de vida del software en el área de monitoreo.", tags: ["azure", "cloud", "ci", "cd", "ci-cd", "devops", "deployment", "sdlc", "sre"] },
         { text: "Administro el monitoreo y la observabilidad de plataformas MSP con OpManager MSP y VSA X, con visibilidad de disponibilidad y alertas.", tags: ["monitoring", "observability", "observabilidad", "monitoreo", "opmanager", "vsa", "rmm", "sre", "alerting", "msp", "reliability"] },
         { text: "Opero la documentación y gestión de clientes con IT Glue y ConnectWise PSA.", tags: ["itglue", "connectwise", "psa", "documentation", "msp", "ticketing"] },
-        { text: "Opero servicios en el portal de Azure y ejecuto despliegues mediante CI/CD, velando por el cumplimiento del ciclo de vida del software en el área de monitoreo.", tags: ["azure", "cloud", "ci", "cd", "ci-cd", "devops", "deployment", "sdlc", "sre"] },
         { text: "Automatizo procesos internos con Python y Playwright para reducir tareas repetitivas.", tags: ["python", "playwright", "automation", "scripting"] },
       ],
     },
