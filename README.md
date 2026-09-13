@@ -1,11 +1,14 @@
 # Focusboard
 
-Tablero personal de tareas, diseñado para trabajo operativo y estudio. Es una **PWA** (instalable, funciona offline y guarda los datos en el navegador) construida con **[Astro](https://astro.build/)** y desplegada en **Firebase Hosting**. Las tareas se mueven entre columnas arrastrándolas; en móvil, con un gesto de arrastre.
+Tablero personal de tareas, diseñado para trabajo operativo y estudio. Es una **PWA** (instalable) construida con **[Astro](https://astro.build/)** y desplegada en **Firebase Hosting**. Las tareas se mueven entre columnas arrastrándolas; en móvil, con un gesto de arrastre.
+
+**Acceso privado:** el tablero y el radar de empleo (`/empleo`) están detrás del mismo login (cuenta de Google autorizada o teléfono). Las tareas se guardan en **Firebase Realtime Database** bajo el nodo `tasks`, protegido del lado servidor por `database.rules.json` — sin la sesión autorizada, Firebase deniega la lectura y la escritura. (Antes `tasks` estaba abierto a todo internet; ya no.)
 
 ## Stack
 
 - **Astro** — estructura por componentes, build estático, assets optimizados.
-- **JS + `localStorage`** — la lógica del tablero vive en `src/scripts/app.js`; los datos quedan en el navegador de cada dispositivo.
+- **JS + Firebase Realtime Database** — la lógica del tablero vive en `src/scripts/app.js`; las tareas se sincronizan en tiempo real por RTDB (nodo `tasks`).
+- **Auth** — Google / teléfono (`src/scripts/auth.js` + `src/scripts/gate.js`); `database.rules.json` repite la comprobación del lado servidor.
 - **PWA** — `public/manifest.webmanifest` + `public/service-worker.js` (caché en tiempo de ejecución).
 - **Firebase Hosting** — hosting estático gratuito con HTTPS y CDN.
 

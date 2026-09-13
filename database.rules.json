@@ -1,8 +1,11 @@
 {
   "rules": {
+    // Solo la cuenta de Andrés (correo verificado) o su teléfono. La MISMA
+    // condición se repite en src/scripts/auth.js (isAllowed): si cambias una,
+    // cambia la otra.
     "tasks": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')",
+      ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')"
     },
     "jobRadar": {
       ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')",

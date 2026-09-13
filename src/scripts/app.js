@@ -1,6 +1,8 @@
 import { db } from "./firebase.js";
 import { ref, onValue, set, update, remove } from "firebase/database";
 import { registerServiceWorker } from "./sw.js";
+import { mountAuthGate } from "./gate.js";
+import { logout } from "./auth.js";
 
 const THEME_KEY = "focusboard.theme.v1";
 const tasksRef = ref(db, "tasks");
@@ -32,14 +34,22 @@ const priorityFilter = document.querySelector("#priority-filter");
 function subscribeTasks() {
   // Fuente de verdad: Realtime Database. Cualquier cambio (local o de otro
   // dispositivo) llega por aquí y re-renderiza el tablero en tiempo real.
-  onValue(
+  // Devuelve la función para cancelar la suscripción (al cerrar sesión).
+  return onValue(
     tasksRef,
     (snapshot) => {
       const value = snapshot.val();
       tasks = value ? Object.values(value) : [];
       render();
     },
-    () => showToast("Sin conexión con la base de datos.")
+    (err) => {
+      console.error("Error leyendo tareas:", err);
+      showToast(
+        err.code === "PERMISSION_DENIED"
+          ? "Sesión sin permisos para este tablero."
+          : "Sin conexión con la base de datos."
+      );
+    }
   );
 }
 
@@ -326,7 +336,25 @@ document.addEventListener("mouseup", endTouchDrag);
 initializeTheme();
 setTodayLabel();
 render();
-subscribeTasks();
+
+// El tablero vive tras el mismo login que el radar: las reglas de RTDB ya no
+// dejan leer/escribir `tasks` sin la cuenta autorizada. subscribeTasks() solo
+// se engancha con sesión válida y se corta al salir.
+let tasksUnsub = null;
+const logoutBtn = document.querySelector("#board-logout");
+logoutBtn?.addEventListener("click", () => logout());
+mountAuthGate({
+  onEnter: () => {
+    if (!tasksUnsub) tasksUnsub = subscribeTasks();
+    if (logoutBtn) logoutBtn.hidden = false;
+  },
+  onLeave: () => {
+    if (tasksUnsub) { tasksUnsub(); tasksUnsub = null; }
+    if (logoutBtn) logoutBtn.hidden = true;
+    tasks = [];
+    render();
+  },
+});
 
 // Solo en producción: en `astro dev` el SW cachea agresivamente y sirve JS/CSS
 // viejo tras cada cambio, incluso en páginas que no lo registran directamente
