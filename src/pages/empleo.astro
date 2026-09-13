@@ -114,6 +114,8 @@ import RadarLayout from "../layouts/RadarLayout.astro";
       </article>
     </section>
 
+    <p class="radar-source-health" id="radar-source-health" hidden></p>
+
     <details class="settings-panel" id="radar-settings">
       <summary>⚙ Parámetros de búsqueda</summary>
       <div class="settings-body">
@@ -220,6 +222,9 @@ import RadarLayout from "../layouts/RadarLayout.astro";
 
   .radar-hero { padding-bottom: 28px; }
   .radar-metrics { margin-bottom: 6px; }
+  .radar-source-health { margin: 0 0 6px; padding: 8px 12px; border-radius: 9px; background: var(--surface-muted); color: var(--muted); font-size: .8rem; }
+  .radar-source-health.is-alert { background: var(--yellow-soft); color: #996608; }
+  [data-theme="dark"] .radar-source-health.is-alert { color: var(--yellow); }
   .radar-controls { flex-wrap: wrap; }
   .radar-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 14px; padding-top: 6px; }
   .radar-empty { padding: 40px 0; color: var(--muted); text-align: center; }
@@ -301,6 +306,7 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     newCount: document.querySelector("#radar-new"),
     discarded: document.querySelector("#radar-discarded"),
     sources: document.querySelector("#radar-sources"),
+    sourceHealth: document.querySelector("#radar-source-health"),
     search: document.querySelector("#radar-search"),
     sourceFilter: document.querySelector("#radar-source-filter"),
     scoreFilter: document.querySelector("#radar-score-filter"),
@@ -523,6 +529,21 @@ import RadarLayout from "../layouts/RadarLayout.astro";
     els.discarded.textContent = run.stats?.discarded ?? "—";
     const srcStats = run.stats?.sources || {};
     els.sources.textContent = `${Object.values(srcStats).filter((n) => n > 0).length}/${Object.keys(srcStats).length || "—"}`;
+
+    // Salud de fuentes: qué portal falló o devolvió 0 en la última corrida.
+    // Sin esto, "5/5 fuentes activas" puede ocultar que 4 están rotas y todo
+    // el top viene de una sola.
+    const srcErrors = run.stats?.errors || {};
+    const failed = Object.keys(srcErrors);
+    const empty = Object.entries(srcStats)
+      .filter(([name, n]) => !n && !srcErrors[name])
+      .map(([name]) => name);
+    const parts = [];
+    if (failed.length) parts.push(`⚠️ Falló: ${failed.join(", ")}`);
+    if (empty.length) parts.push(`Sin resultados: ${empty.join(", ")}`);
+    els.sourceHealth.textContent = parts.join("  ·  ");
+    els.sourceHealth.hidden = parts.length === 0;
+    els.sourceHealth.classList.toggle("is-alert", failed.length > 0);
 
     const text = els.search.value.trim().toLowerCase();
     const minScore = Number(els.scoreFilter.value);
