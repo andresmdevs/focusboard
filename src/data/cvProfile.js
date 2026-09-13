@@ -16,7 +16,7 @@ export const profile = {
     { name: "Inglés", level: "B2 escrito / lectura técnica" },
   ],
 
-  // Tres "pistas" de perfil: el generador elige según las keywords de la oferta.
+  // Cuatro "pistas" de perfil: el generador elige según las keywords de la oferta.
   tracks: {
     sre: {
       headline: "Ingeniero SRE · Monitoreo y Observabilidad",
@@ -33,9 +33,15 @@ export const profile = {
       summary:
         "Desarrollador full stack con experiencia construyendo aplicaciones web y móviles ({skills}). Integro servicios REST, bases de datos SQL/NoSQL y automatización de pruebas con Playwright, con enfoque en soluciones que resuelven necesidades reales del cliente. Trabajo 100% remoto.",
     },
+    ai: {
+      headline: "Software Engineer · IA Aplicada / Agentic AI (Azure AI)",
+      summary:
+        "Desarrollador full stack certificado Azure AI Engineer Associate, con base sólida en integración de APIs/microservicios y automatización, orientado a construir soluciones con IA agéntica y modelos aplicados al negocio ({skills}). Integro servicios REST, bases de datos y CI/CD, con foco en soluciones escalables y mantenibles. Trabajo 100% remoto.",
+    },
   },
 
   skills: [
+    { name: "Azure AI (certificado) · IA Generativa y Agéntica", tags: ["azure ai", "ai", "inteligencia artificial", "agentic", "agentes", "llm", "genai", "ia generativa", "machine learning", "cognitive services", "openai", "chatbot", "ai engineer", "ai specialist"], weight: 9 },
     { name: "Playwright (E2E)", tags: ["playwright", "qa", "test", "automation", "e2e", "sdet", "automatiza"], weight: 10 },
     { name: "Python (automatización y datos)", tags: ["python", "scripting", "data", "automation"], weight: 9 },
     { name: "Monitoreo y Observabilidad (OpManager MSP, VSA X)", tags: ["monitoring", "observability", "observabilidad", "monitoreo", "opmanager", "vsa", "vsax", "rmm", "sre", "site reliability", "reliability", "alerting", "uptime", "noc", "msp"], weight: 9 },
@@ -109,5 +115,16 @@ export const profile = {
   education: [
     { title: "Tecnólogo en Análisis y Desarrollo de Software", school: "SENA", period: "2016 – 2020" },
     { title: "Técnico Laboral, Asistente en Desarrollo de Software", school: "CESDE", period: "2018 – 2019" },
+  ],
+
+  // Se listan siempre (no solo cuando matchean tags), igual que educación: son
+  // credenciales vigentes y verificables, no relleno.
+  certifications: [
+    {
+      name: "Microsoft Certified: Desarrollador Asociado de Azure AI Cloud",
+      issuer: "Microsoft",
+      date: "Sep 2026",
+      tags: ["azure ai", "ai", "inteligencia artificial", "agentic", "llm", "genai", "machine learning", "cognitive services"],
+    },
   ],
 };

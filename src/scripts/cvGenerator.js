@@ -38,6 +38,10 @@ function pickTrack(haystack) {
     dev: ["developer", "desarrollador", "full stack", "fullstack", "frontend",
           "backend", "angular", "react", "node", "mobile", "movil",
           "software engineer", "ingeniero de software"],
+    ai: ["agentic", "agentes", "agéntica", "agentica", "inteligencia artificial",
+         "artificial intelligence", "ai engineer", "ai specialist", "azure ai",
+         "llm", "genai", "ia generativa", "machine learning", "cognitive services",
+         "openai", "chatbot", "prompt"],
   };
   const ranked = Object.entries(signals)
     .map(([track, kws]) => [track, matchCount(kws, haystack)])
@@ -147,6 +151,13 @@ export function buildDocDefinition(job) {
                 text: [{ text: l.name, bold: true }, { text: ` — ${l.level}`, color: MUTED }],
                 fontSize: 9.2, margin: [0, 1.5, 0, 0],
               })),
+              ...(profile.certifications?.length ? [
+                { text: "CERTIFICACIONES", style: "section", margin: [0, 14, 0, 6] },
+                ...profile.certifications.map((c) => ({
+                  text: [{ text: c.name, bold: true }, { text: ` — ${c.issuer}, ${c.date}`, color: MUTED }],
+                  fontSize: 8.8, margin: [0, 1.5, 0, 0],
+                })),
+              ] : []),
               { text: "VACANTE OBJETIVO", style: "section", margin: [0, 14, 0, 6] },
               { text: job.title, fontSize: 9, bold: true },
               { text: job.company, fontSize: 8.5, color: MUTED },
