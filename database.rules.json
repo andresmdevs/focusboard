@@ -1,12 +1,57 @@
 {
   "rules": {
-    // Solo la cuenta de Andrés (correo verificado) o su teléfono. La MISMA
+    // DUEÑO = la cuenta de Andrés (correo verificado) o su teléfono. La MISMA
     // condición se repite en src/scripts/auth.js (isAllowed): si cambias una,
     // cambia la otra.
-    "tasks": {
-      ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')",
-      ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')"
+    //
+    // MIEMBRO DEL TABLERO = sesión por teléfono cuyo número figura en
+    // `boardMembers` con valor true. Esa lista vive en la base (no en el código),
+    // así se agregan/quitan personas desde la consola de Firebase sin desplegar y
+    // sus números no quedan publicados en el bundle JS.
+
+    "boardMembers": {
+      // { "+573001234567": true, ... } — solo el dueño la edita. Cada número se
+      // puede consultar suelto (el login lo revisa ANTES de mandar el SMS), pero
+      // la lista completa no se deja leer: no hay .read en este nivel.
+      ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')",
+      "$phone": {
+        ".read": true,
+        ".validate": "newData.isBoolean() && $phone.matches(/^[+][0-9]+$/) && $phone.length <= 16"
+      }
     },
+
+    "tasks": {
+      ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074' || (auth.token.phone_number != null && root.child('boardMembers').child(auth.token.phone_number).val() === true))",
+      // .write va por tarea y no sobre `tasks`: evita que un set() sobre el nodo
+      // completo lo reemplace o lo borre por error. (Borrar tareas sí se puede,
+      // una a una o con un update() multi-ruta: cualquier miembro puede borrar.)
+      "$taskId": {
+        ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074' || (auth.token.phone_number != null && root.child('boardMembers').child(auth.token.phone_number).val() === true))",
+        // Forma de una tarea (ver el submit de src/scripts/app.js). Los límites
+        // repiten los maxlength del formulario (TaskDialog.astro).
+        ".validate": "newData.hasChildren(['id', 'title', 'status', 'priority', 'createdAt']) && newData.child('id').val() === $taskId",
+        "id": { ".validate": "newData.isString()" },
+        "title": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120" },
+        "description": { ".validate": "newData.isString() && newData.val().length <= 280" },
+        "status": { ".validate": "newData.isString() && newData.val().matches(/^(todo|progress|testing|done)$/)" },
+        "priority": { ".validate": "newData.isString() && newData.val().matches(/^(high|medium|low)$/)" },
+        "dueDate": { ".validate": "newData.isString() && (newData.val() === '' || newData.val().matches(/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/))" },
+        "createdAt": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "tags": {
+          // Tiene que ser una lista: sin esto un valor suelto (p. ej. 42) se salta
+          // la regla de cada elemento y rompe el render en todos los clientes.
+          ".validate": "newData.hasChildren()",
+          "$i": { ".validate": "$i.matches(/^[0-9]+$/) && $i.length <= 2 && newData.isString() && newData.val().length <= 100" }
+        },
+        // Involucrados: hasta 20 nombres (índices 0-19) de máximo 40 caracteres.
+        "people": {
+          ".validate": "newData.hasChildren()",
+          "$i": { ".validate": "$i.matches(/^(1?[0-9])$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 40" }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+
     "jobRadar": {
       ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')",
       ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'andreshcp@gmail.com') || auth.token.phone_number === '+573008427074')"

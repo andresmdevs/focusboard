@@ -105,7 +105,9 @@ h1 { max-width: 700px; margin-bottom: 12px; font-family: Fraunces, Georgia, seri
 .status-dot { width: 9px; height: 9px; border-radius: 50%; }
 .status-dot-todo { background: var(--yellow); }.status-dot-progress { background: var(--accent); }.status-dot-testing { background: var(--purple); }.status-dot-done { background: #4ea077; }
 .column-count { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 7px; background: var(--surface); color: var(--muted); font-family: "DM Mono", monospace; font-size: .72rem; }
-.task-list { display: grid; gap: 10px; min-height: 18px; }
+/* minmax(0, 1fr): la tarjeta nunca es más ancha que la columna; lo que no cabe
+   (p. ej. nombres largos de involucrados) se recorta con elipsis. */
+.task-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-height: 18px; }
 .task-card { position: relative; padding: 14px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--line) 85%, transparent); border-radius: 12px; box-shadow: 0 3px 10px rgba(25, 38, 32, .035); cursor: grab; transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; }
 .task-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .task-card:active { cursor: grabbing; }
@@ -124,10 +126,18 @@ h1 { max-width: 700px; margin-bottom: 12px; font-family: Fraunces, Georgia, seri
 .task-tags { display: flex; flex-wrap: wrap; gap: 5px; min-height: 0; margin-bottom: 13px; }
 .task-tags:empty { display: none; }
 .tag { padding: 3px 7px; border-radius: 5px; background: var(--surface-muted); color: var(--muted); font-size: .68rem; }
+.task-people { display: flex; align-items: center; gap: 7px; min-width: 0; margin-bottom: 12px; }
+.task-people:empty { display: none; }
+.avatar-stack { display: flex; flex: none; }
+.avatar { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); font-size: .6rem; font-weight: 700; letter-spacing: .02em; line-height: 1; }
+.avatar + .avatar { margin-left: -4px; }
+.avatar-tone-0 { background: var(--accent-soft); color: var(--accent-dark); }.avatar-tone-1 { background: var(--purple-soft); color: var(--purple); }.avatar-tone-2 { background: var(--yellow-soft); color: var(--text); }
+.avatar-more { background: var(--surface-muted); color: var(--text); font-family: "DM Mono", monospace; font-weight: 500; }
+.people-label { overflow: hidden; color: var(--muted); font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; }
 .task-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 25px; }
 .due-date { color: var(--muted); font-family: "DM Mono", monospace; font-size: .66rem; white-space: nowrap; }
 .due-date.overdue { color: var(--red); }.due-date.today { color: var(--accent); }
-.status-select { max-width: 115px; padding: 4px 3px; border: 0; border-radius: 5px; background: var(--surface-muted); color: var(--muted); font-size: .67rem; }
+.status-select { min-width: 0; max-width: 115px; padding: 4px 3px; border: 0; border-radius: 5px; background: var(--surface-muted); color: var(--muted); font-size: .67rem; }
 .add-task-link { width: 100%; margin-top: 10px; padding: 9px 7px; border: 1px dashed transparent; border-radius: 8px; background: transparent; color: var(--muted); text-align: left; font-size: .82rem; }
 .add-task-link:hover { border-color: var(--line); background: var(--surface); color: var(--accent); }
 .empty-state { padding: 16px 5px 4px; color: var(--muted); font-size: .81rem; line-height: 1.4; text-align: center; }
@@ -141,6 +151,16 @@ h1 { max-width: 700px; margin-bottom: 12px; font-family: Fraunces, Georgia, seri
 .form-field { display: grid; gap: 7px; color: var(--text); font-size: .83rem; font-weight: 600; }
 .form-field-wide { grid-column: 1 / -1; }.form-field span { color: var(--muted); font-weight: 400; }
 .form-field input, .form-field select, .form-field textarea { width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 9px; outline: 0; background: var(--bg); color: var(--text); font-size: .91rem; font-weight: 400; }
+.form-field > label { display: grid; gap: 7px; }
+.people-input { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); cursor: text; }
+.people-input:focus-within { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+.form-field .people-input input { flex: 1 1 140px; width: auto; min-width: 140px; padding: 4px 5px; border: 0; background: transparent; }
+.form-field .people-input input:focus-visible { outline: 0; }
+.people-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.people-chips:empty { display: none; }
+.person-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 3px 3px 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-dark); font-size: .83rem; font-weight: 500; overflow-wrap: anywhere; }
+.person-chip-remove { display: grid; place-items: center; flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 1rem; line-height: 1; }
+.person-chip-remove:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .form-field textarea { resize: vertical; }.dialog-actions { display: flex; align-items: center; gap: 9px; margin-top: 24px; }.dialog-spacer { flex: 1; }
 .toast { position: fixed; bottom: 20px; left: 50%; z-index: 5; max-width: calc(100% - 32px); padding: 11px 15px; border-radius: 10px; background: var(--text); color: var(--bg); font-size: .86rem; font-weight: 500; opacity: 0; pointer-events: none; transform: translate(-50%, 12px); transition: .2s ease; }.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 
