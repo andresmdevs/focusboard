@@ -45,6 +45,23 @@ async function hasBoardAccess(user) {
   return Boolean(user.phoneNumber) && isBoardPhone(user.phoneNumber);
 }
 
+/** Mensaje para la persona según el error de Firebase al pedir el SMS. */
+function sendCodeErrorMessage(err) {
+  switch (err?.code) {
+    // Spark permite 10 SMS al día por proyecto; se renueva al día siguiente.
+    case "auth/quota-exceeded":
+      return "Se agotó el cupo de códigos SMS de hoy. Intenta de nuevo mañana.";
+    case "auth/too-many-requests":
+      return "Demasiados intentos desde este dispositivo. Espera un rato y vuelve a intentar.";
+    case "auth/invalid-phone-number":
+      return "Ese número no es válido. Revisa que esté completo (ej. 300 000 0000).";
+    case "auth/captcha-check-failed":
+      return "No se pudo validar el reCAPTCHA. Recarga la página e intenta de nuevo.";
+    default:
+      return `No se pudo enviar el código (${err?.code || "error"}).`;
+  }
+}
+
 const STYLE = `
   .auth-gate { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
     padding: 24px; background: var(--bg, #f4f4f0); }
@@ -160,7 +177,7 @@ export function mountAuthGate({ onEnter, onLeave } = {}) {
       setCopy(`Código enviado a ${phone} — revisa tus SMS.`);
     } catch (err) {
       console.error("Error enviando código:", err);
-      setCopy(`No se pudo enviar el código (${err?.code || "error"}).`, true);
+      setCopy(sendCodeErrorMessage(err), true);
     } finally {
       els.phoneSend.disabled = false;
       els.phoneSend.textContent = "Enviar código";
