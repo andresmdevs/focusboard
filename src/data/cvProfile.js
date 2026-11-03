@@ -36,7 +36,7 @@ export const profile = {
     ai: {
       headline: "Software Engineer · IA Aplicada / Agentic AI (Azure AI)",
       summary:
-        "Desarrollador full stack certificado Azure AI Engineer Associate, con base sólida en integración de APIs/microservicios y automatización, orientado a construir soluciones con IA agéntica y modelos aplicados al negocio ({skills}). Integro servicios REST, bases de datos y CI/CD, con foco en soluciones escalables y mantenibles. Trabajo 100% remoto.",
+        "Desarrollador full stack certificado Azure AI Cloud Developer Associate, con base sólida en integración de APIs/microservicios y automatización, orientado a construir soluciones con IA agéntica y modelos aplicados al negocio ({skills}). Integro servicios REST, bases de datos y CI/CD, con foco en soluciones escalables y mantenibles. Trabajo 100% remoto.",
     },
   },
 
