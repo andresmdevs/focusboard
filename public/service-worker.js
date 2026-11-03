@@ -12,7 +12,7 @@
 // Sube este número en cada cambio que deba invalidar el caché: al activarse el
 // nuevo service worker se borran los caches con nombre distinto, evitando que
 // el navegador siga sirviendo una versión vieja de la app tras un despliegue.
-const CACHE_NAME = "focusboard-v9";
+const CACHE_NAME = "focusboard-v10";
 const OFFLINE_URL = "/";
 
 self.addEventListener("install", () => {
@@ -39,7 +39,10 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
+      // cache: "no-cache" revalida el HTML con el servidor (304 si no cambió):
+      // sin esto la caché HTTP (max-age=3600 de Firebase Hosting) puede servir
+      // la versión anterior hasta una hora después de un despliegue.
+      fetch(request, { cache: "no-cache" })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));

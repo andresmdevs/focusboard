@@ -1,19 +1,66 @@
-// Overlay de login reutilizable para las páginas privadas (tablero y radar).
+// Overlay de login del tablero: solo por número de teléfono autorizado.
 //
 // IMPORTANTE: esto es capa de interfaz, NO la seguridad. La seguridad real está
-// en database.rules.json, que repite la comprobación del lado del servidor: sin
-// la sesión autorizada, Firebase deniega los datos aunque alguien salte la UI.
-// Antes el nodo `tasks` estaba abierto (`.read/.write: true`) y cualquiera podía
-// leer o borrar el tablero; ahora exige la misma cuenta que `jobRadar`, así que
-// el tablero necesita este gate para no chocar con errores de permisos.
+// en database.rules.json: `tasks` solo se deja leer/escribir por el dueño o por
+// un teléfono registrado en `boardMembers`. El gate consulta esa misma lista
+// ANTES de mandar el SMS, para que un número no autorizado ni reciba código.
+//
+// El radar (/empleo) NO usa este gate: sigue siendo solo del dueño.
 //
 // Uso:
 //   import { mountAuthGate } from "./gate.js";
-//   mountAuthGate({ onEnter: (user) => {...}, onLeave: (user) => {...} });
+//   const gate = mountAuthGate({ onEnter: (user) => {...}, onLeave: (user) => {...} });
+//   gate.recheck();  // vuelve a verificar el acceso (p. ej. si Firebase lo negó)
+import { ref, get } from "firebase/database";
+import { db } from "./firebase.js";
 import {
-  auth, isAllowed, watchSession, login,
-  consumeRedirectResult, sendPhoneCode, confirmPhoneCode,
+  auth, isAllowed, ALLOWED_PHONES, watchSession, sendPhoneCode, confirmPhoneCode,
 } from "./auth.js";
+
+/** Indicativo que se asume cuando el número se escribe sin "+". */
+const DEFAULT_COUNTRY_CODE = "+57";
+
+/** Normaliza lo que escribe la persona a E.164 (+573001234567). */
+export function normalizePhone(raw) {
+  const digits = raw.replace(/\D/g, "");
+  if (raw.trim().startsWith("+")) return `+${digits}`;
+  // "0057…" es la forma de marcar internacional sin "+".
+  if (digits.startsWith("00")) return `+${digits.slice(2)}`;
+  // 10 dígitos sin indicativo = número local (móvil colombiano).
+  if (digits.length === 10) return `${DEFAULT_COUNTRY_CODE}${digits}`;
+  return `+${digits}`;
+}
+
+/** ¿Este número puede entrar al tablero? El dueño siempre; el resto, si está en boardMembers. */
+async function isBoardPhone(phone) {
+  if (ALLOWED_PHONES.includes(phone)) return true;
+  const snapshot = await get(ref(db, `boardMembers/${phone}`));
+  return snapshot.val() === true;
+}
+
+/** Acceso al tablero de una sesión: el dueño (correo o teléfono) o un teléfono autorizado. */
+async function hasBoardAccess(user) {
+  if (!user) return false;
+  if (isAllowed(user)) return true;
+  return Boolean(user.phoneNumber) && isBoardPhone(user.phoneNumber);
+}
+
+/** Mensaje para la persona según el error de Firebase al pedir el SMS. */
+function sendCodeErrorMessage(err) {
+  switch (err?.code) {
+    // Spark permite 10 SMS al día por proyecto; se renueva al día siguiente.
+    case "auth/quota-exceeded":
+      return "Se agotó el cupo de códigos SMS de hoy. Intenta de nuevo mañana.";
+    case "auth/too-many-requests":
+      return "Demasiados intentos desde este dispositivo. Espera un rato y vuelve a intentar.";
+    case "auth/invalid-phone-number":
+      return "Ese número no es válido. Revisa que esté completo (ej. 300 000 0000).";
+    case "auth/captcha-check-failed":
+      return "No se pudo validar el reCAPTCHA. Recarga la página e intenta de nuevo.";
+    default:
+      return `No se pudo enviar el código (${err?.code || "error"}).`;
+  }
+}
 
 const STYLE = `
   .auth-gate { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
@@ -38,24 +85,20 @@ const MARKUP = `
   <div class="auth-gate-card">
     <p class="eyebrow">ACCESO PRIVADO</p>
     <h2>focusboard</h2>
-    <p class="auth-gate-copy" data-gate="copy">Verificando sesión…</p>
-
-    <button class="primary-button" type="button" data-gate="google" hidden>
-      Iniciar sesión con Google
-    </button>
-    <button class="auth-gate-toggle" type="button" data-gate="show-phone" hidden>
-      O inicia sesión con tu número de teléfono
-    </button>
+    <p class="auth-gate-copy" data-gate="copy" role="status" aria-live="polite">Verificando sesión…</p>
 
     <form class="auth-gate-phone" data-gate="phone-form" hidden>
-      <input type="tel" inputmode="tel" autocomplete="tel" placeholder="+57 300 000 0000" data-gate="phone" />
+      <label class="sr-only" for="auth-gate-phone-input">Número de teléfono</label>
+      <input id="auth-gate-phone-input" type="tel" inputmode="tel" autocomplete="tel"
+        placeholder="300 000 0000" data-gate="phone" />
       <button class="primary-button" type="submit" data-gate="phone-send">Enviar código</button>
       <div data-gate="code-group" hidden style="display:grid;gap:10px">
-        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+        <label class="sr-only" for="auth-gate-code-input">Código de verificación</label>
+        <input id="auth-gate-code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
           placeholder="Código de 6 dígitos" data-gate="code" />
         <button class="primary-button" type="button" data-gate="verify">Verificar código</button>
+        <button class="auth-gate-toggle" type="button" data-gate="change-phone">Usar otro número</button>
       </div>
-      <button class="auth-gate-toggle" type="button" data-gate="show-google">← Volver a Google</button>
     </form>
 
     <div class="auth-gate-recaptcha" data-gate="recaptcha"></div>
@@ -77,73 +120,64 @@ export function mountAuthGate({ onEnter, onLeave } = {}) {
 
   const $ = (name) => gate.querySelector(`[data-gate="${name}"]`);
   const els = {
-    copy: $("copy"), google: $("google"), showPhone: $("show-phone"),
-    showGoogle: $("show-google"), phoneForm: $("phone-form"), phone: $("phone"),
+    copy: $("copy"), phoneForm: $("phone-form"), phone: $("phone"),
     phoneSend: $("phone-send"), codeGroup: $("code-group"), code: $("code"),
-    verify: $("verify"),
+    verify: $("verify"), changePhone: $("change-phone"),
   };
 
   let entered = false;
   let confirmation = null;
+  // Cada cambio de sesión dispara una verificación asíncrona (consulta
+  // boardMembers); este contador descarta respuestas de sesiones ya viejas.
+  let checkSeq = 0;
+  let lastCheckFailed = false;
 
   const setCopy = (text, isError = false) => {
     els.copy.textContent = text;
     els.copy.classList.toggle("is-error", isError);
   };
-  const showLoginButtons = () => {
-    els.google.hidden = false;
-    if (els.phoneForm.hidden) els.showPhone.hidden = false;
+  const resetCodeStep = () => {
+    els.codeGroup.hidden = true;
+    els.code.value = "";
+    els.phone.disabled = false;
+    els.phoneSend.hidden = false;
+    confirmation = null;
   };
 
-  els.google.addEventListener("click", async () => {
-    els.google.disabled = true;
-    setCopy("Abriendo Google…");
-    try {
-      await login();
-    } catch (err) {
-      console.error("Error al iniciar sesión:", err);
-      setCopy(`No se pudo iniciar sesión (${err?.code || "error"}).`, true);
-      showLoginButtons();
-      els.google.disabled = false;
-    }
-  });
-
-  els.showPhone.addEventListener("click", () => {
-    els.google.hidden = true;
-    els.showPhone.hidden = true;
-    els.phoneForm.hidden = false;
+  els.changePhone.addEventListener("click", () => {
+    resetCodeStep();
+    setCopy("Escribe tu número autorizado.");
     els.phone.focus();
-  });
-  els.showGoogle.addEventListener("click", () => {
-    els.phoneForm.hidden = true;
-    els.codeGroup.hidden = true;
-    els.phone.value = "";
-    els.code.value = "";
-    confirmation = null;
-    showLoginButtons();
   });
 
   els.phoneForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const raw = els.phone.value.trim();
-    const phone = (raw.startsWith("+") ? "+" : "") + raw.replace(/\D/g, "");
-    if (phone.replace("+", "").length < 8) {
-      setCopy("Escribe un número válido con indicativo de país (ej. +57…).", true);
+    const phone = normalizePhone(els.phone.value);
+    if (phone.replace("+", "").length < 10) {
+      setCopy("Escribe un número válido (ej. 300 000 0000).", true);
       return;
     }
     els.phoneSend.disabled = true;
-    els.phoneSend.textContent = "Enviando…";
+    els.phoneSend.textContent = "Verificando…";
     try {
+      // Filtro antes del SMS: un número fuera de la lista ni recibe código.
+      if (!(await isBoardPhone(phone))) {
+        setCopy(`El número ${phone} no está autorizado para este tablero.`, true);
+        return;
+      }
+      els.phoneSend.textContent = "Enviando…";
       // RecaptchaVerifier necesita un contenedor con id; se lo damos al vuelo.
       const recaptchaEl = $("recaptcha");
       if (!recaptchaEl.id) recaptchaEl.id = "auth-gate-recaptcha-box";
       confirmation = await sendPhoneCode(phone, recaptchaEl.id);
+      els.phone.disabled = true;
+      els.phoneSend.hidden = true;
       els.codeGroup.hidden = false;
       els.code.focus();
-      setCopy("Código enviado — revisa tus SMS.");
+      setCopy(`Código enviado a ${phone} — revisa tus SMS.`);
     } catch (err) {
       console.error("Error enviando código:", err);
-      setCopy(`No se pudo enviar el código (${err?.code || "error"}).`, true);
+      setCopy(sendCodeErrorMessage(err), true);
     } finally {
       els.phoneSend.disabled = false;
       els.phoneSend.textContent = "Enviar código";
@@ -159,6 +193,7 @@ export function mountAuthGate({ onEnter, onLeave } = {}) {
     els.verify.disabled = true;
     els.verify.textContent = "Verificando…";
     try {
+      // Éxito: watchSession() detecta la nueva sesión y apply() abre el tablero.
       await confirmPhoneCode(confirmation, code);
     } catch (err) {
       console.error("Error verificando código:", err);
@@ -168,14 +203,26 @@ export function mountAuthGate({ onEnter, onLeave } = {}) {
       els.verify.textContent = "Verificar código";
     }
   });
-
-  consumeRedirectResult().catch((err) => {
-    console.error("Error procesando el login:", err);
-    setCopy(`No se pudo completar el inicio de sesión (${err?.code || "error"}).`, true);
-    showLoginButtons();
+  els.code.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      els.verify.click();
+    }
   });
 
-  function apply(user, allowed) {
+  async function apply(user) {
+    const seq = ++checkSeq;
+    let allowed = false;
+    let failed = false;
+    try {
+      allowed = await hasBoardAccess(user);
+    } catch (err) {
+      console.error("Error verificando el acceso al tablero:", err);
+      failed = true;
+    }
+    if (seq !== checkSeq) return;
+    lastCheckFailed = failed;
+
     if (allowed) {
       gate.hidden = true;
       if (!entered) { entered = true; onEnter?.(user); }
@@ -183,19 +230,34 @@ export function mountAuthGate({ onEnter, onLeave } = {}) {
     }
     gate.hidden = false;
     if (entered) { entered = false; onLeave?.(user); }
-    els.phoneForm.hidden = true;
-    els.codeGroup.hidden = true;
-    confirmation = null;
-    if (user?.email) {
-      setCopy(`La cuenta ${user.email} no tiene acceso.`, true);
+    resetCodeStep();
+    els.phoneForm.hidden = false;
+    if (failed) {
+      setCopy("No se pudo verificar el acceso. Revisa tu conexión.", true);
     } else if (user?.phoneNumber) {
-      setCopy(`El número ${user.phoneNumber} no tiene acceso.`, true);
+      setCopy(`El número ${user.phoneNumber} no tiene acceso a este tablero.`, true);
+    } else if (user?.email) {
+      setCopy(`La cuenta ${user.email} no tiene acceso. Entra con tu número autorizado.`, true);
     } else {
-      setCopy("Sección privada. Inicia sesión para ver tu tablero.");
+      setCopy("Tablero privado. Entra con tu número de teléfono autorizado.");
     }
-    showLoginButtons();
   }
 
-  if (auth.currentUser) apply(auth.currentUser, isAllowed(auth.currentUser));
-  return watchSession(apply);
+  // Si la verificación falló por red, reintenta al volver la conexión. Solo en
+  // ese caso: sin sesión, apply() reinicia el formulario y se perdería el paso
+  // del código SMS que esté en curso.
+  window.addEventListener("online", () => {
+    if (!entered && lastCheckFailed) apply(auth.currentUser);
+  });
+
+  const unsubscribe = watchSession((user) => apply(user));
+  return {
+    unsubscribe,
+    // Re-verifica la sesión actual desde cero: si sigue teniendo acceso vuelve
+    // a llamar onEnter (re-suscribe); si no, muestra el gate.
+    recheck() {
+      if (entered) { entered = false; onLeave?.(auth.currentUser); }
+      return apply(auth.currentUser);
+    },
+  };
 }

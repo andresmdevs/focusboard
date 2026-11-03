@@ -31,11 +31,23 @@
         </select>
       </label>
       <label class="form-field">Fecha límite <span>(opcional)</span>
-        <input id="task-due-date" name="dueDate" type="date" />
+        <input id="task-due-date" name="dueDate" type="date" max="9999-12-31" />
       </label>
       <label class="form-field">Etiquetas <span>(separadas por coma)</span>
         <input id="task-tags" name="tags" type="text" maxlength="100" placeholder="Estudio, Azure" />
       </label>
+      <!-- div + label[for] (no un label envolvente): dentro hay botones para
+           quitar nombres, y un label que los envuelve activaría el primero al
+           hacer clic en el texto. -->
+      <div class="form-field form-field-wide">
+        <label for="task-people-input">Involucrados <span>(opcional · Enter o coma para añadir)</span></label>
+        <div class="people-input">
+          <ul class="people-chips" id="task-people-chips" aria-label="Personas involucradas"></ul>
+          <input id="task-people-input" type="text" maxlength="40" list="people-suggestions" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="enter" placeholder="Escribe un nombre" />
+        </div>
+        <datalist id="people-suggestions"></datalist>
+        <p class="sr-only" id="task-people-status" role="status" aria-live="polite"></p>
+      </div>
     </div>
     <div class="dialog-actions">
       <button class="danger-button" id="delete-task" type="button" hidden>Eliminar</button>
